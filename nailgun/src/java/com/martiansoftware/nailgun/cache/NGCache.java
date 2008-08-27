@@ -35,6 +35,11 @@ import org.helios.jmx.dynamic.annotations.options.AttributeMutabilityOption;
  * <p>Copyright 2008, Martian Software, Inc.</p>
  * @author Whitehead (nwhitehead@heliosdev.org)
  * @version $Revision$
+ * TODO: Static helper to get jmx agent.
+ * TODO: Implement EnvThenSysProps accessor to get overrides on default configuration parameters.
+ * TODO: Need cache interface and cache factory. Someone might want to create their own impl.
+ * TODO: Expiry thread.
+ * TODO: Implement thread exclusive access cache container for non-thread safe cache entries.
  */
 @JMXManagedObject (annotated=true, declared=true)
 public class NGCache implements Invalidateable {
