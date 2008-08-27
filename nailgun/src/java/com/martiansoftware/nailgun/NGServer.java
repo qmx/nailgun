@@ -19,13 +19,27 @@
 package com.martiansoftware.nailgun;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Map;
+
+import javax.management.ObjectName;
+
+import org.helios.helpers.JMXHelperExtended;
+import org.helios.jmx.dynamic.ManagedObjectDynamicMBean;
+import org.helios.jmx.dynamic.annotations.JMXAttribute;
+import org.helios.jmx.dynamic.annotations.JMXManagedObject;
+import org.helios.jmx.dynamic.annotations.JMXOperation;
+import org.helios.jmx.dynamic.annotations.JMXParameter;
+import org.helios.jmx.dynamic.annotations.options.AttributeMutabilityOption;
 
 import com.martiansoftware.nailgun.builtins.DefaultNail;
 
@@ -39,7 +53,14 @@ import com.martiansoftware.nailgun.builtins.DefaultNail;
  * 
  * @author <a href="http://www.martiansoftware.com/contact.html">Marty Lamb</a>
  */
+@JMXManagedObject (annotated=true, declared=true)
 public class NGServer implements Runnable {
+	
+	/**
+	 * The dynamic MBean that will be registered with
+	 * the platform JMX Agent.
+	 */
+	protected ManagedObjectDynamicMBean modb = null;
 
 	/**
 	 * The address on which to listen, or null to listen on all
@@ -109,6 +130,11 @@ public class NGServer implements Runnable {
 	private Map allNailStats = null;
 	
 	/**
+	 * The JMX ObjectName pattern for the NGServer to be registered under. The actual port number needs to be appended.
+	 */
+	public static final String NAILGUN_OBJECT_NAME = "com.martiansoftware.nailgun:service=NGServer,port=";
+	
+	/**
 	 * Remember the security manager we start with so we can restore it later
 	 */
 	private SecurityManager originalSecurityManager = null;
@@ -125,6 +151,21 @@ public class NGServer implements Runnable {
 	 */
 	public NGServer(InetAddress addr, int port) {
 		init(addr, port);
+		// create a new dynamic mbean with the management interface for this object.
+		modb = new ManagedObjectDynamicMBean();
+		modb.reflectObject(this);
+		try {
+			// Build an objectName unique to the addr and port.
+			StringBuilder objectNameStr = new StringBuilder(NAILGUN_OBJECT_NAME);
+			objectNameStr.append(port);
+			if(addr != null) {
+				objectNameStr.append(",").append("address=").append(addr.getHostAddress());
+			}
+			// Register the dynamic mbean with the created object name.
+			ManagementFactory.getPlatformMBeanServer().registerMBean(modb, JMXHelperExtended.objectName(objectNameStr.toString()));
+		} catch (Exception e) {
+			System.err.println("Failed to register JMX Management Interface for NGServer. [" + e + "]. Continuing without.");
+		}
 	}
 	
 	/**
@@ -279,7 +320,8 @@ public class NGServer implements Runnable {
 	 * to perform some tasks, such as shutting down any AWT or Swing threads
 	 * implicitly launched by your nails.
 	 */
-	public void shutdown(boolean exitVM) {
+	@JMXOperation (name="shutdown", description="Stops the NGServer")
+	public void shutdown(@JMXParameter(name="exitVM", description="if true, exits the vm immediately") boolean exitVM) {
 		synchronized(this) {
 			if (shutdown) return;
 			shutdown = true;
@@ -330,8 +372,8 @@ public class NGServer implements Runnable {
 	}
 	
 	/**
-	 * Returns true iff the server is currently running.
-	 * @return true iff the server is currently running.
+	 * Returns true if the server is currently running.
+	 * @return true if the server is currently running.
 	 */
 	public boolean isRunning() {
 		return (running);
@@ -341,9 +383,23 @@ public class NGServer implements Runnable {
 	 * Returns the port on which this server is (or will be) listening.
 	 * @return the port on which this server is (or will be) listening.
 	 */
+	@JMXAttribute(name="Port", description="The port on which this server is (or will be) listening.", mutability=AttributeMutabilityOption.READ_ONLY)
 	public int getPort() {
 		return ((serversocket == null) ? port : serversocket.getLocalPort());
 	}
+	
+	/**
+	 * Returns the Inet Address on which the server is (or will be) listening.
+	 * @return the Inet Address on which the server is (or will be) listening.
+	 */
+	@JMXAttribute(name="Address", description="The inet addresses on which this server is (or will be) listening.", mutability=AttributeMutabilityOption.READ_ONLY)
+	public String getAddr() {
+		if(addr==null) {
+			return "0.0.0.0";
+		} else {
+			return addr.getHostAddress();
+		}
+	}	
 	
 	/**
 	 * Listens for new connections and launches NGSession threads

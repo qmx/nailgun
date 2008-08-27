@@ -18,13 +18,20 @@
 
 package com.martiansoftware.nailgun;
 
+import java.util.Collection;
+import java.util.Set;
+
+import javax.management.openmbean.CompositeData;
+import javax.management.openmbean.TabularData;
+import javax.management.openmbean.TabularType;
+
 /**
  * <p>Collects and provides statistics on a nail.</p>
  * 
  * @author <a href="http://www.martiansoftware.com/contact.html">Marty Lamb</a>
  */
 
-public class NailStats implements Cloneable {
+public class NailStats implements Cloneable,TabularData  {
 
 	private Class nailclass;
 	private long runCounter;
@@ -126,5 +133,83 @@ public class NailStats implements Cloneable {
 	 */
 	public String toString() {
 		return (nailclass.getName() + ": " + getRunCount() + "/" + getRefCount());
+	}
+
+	@Override
+	public Object[] calculateIndex(CompositeData arg0) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void clear() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public boolean containsKey(Object[] arg0) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public boolean containsValue(CompositeData arg0) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public CompositeData get(Object[] arg0) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public TabularType getTabularType() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public boolean isEmpty() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public Set<?> keySet() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void put(CompositeData arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void putAll(CompositeData[] arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public CompositeData remove(Object[] arg0) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public int size() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public Collection<?> values() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }
