@@ -18,6 +18,10 @@
 
 package com.martiansoftware.nailgun.components.builtins.cache;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Pattern;
+
 import EDU.oswego.cs.dl.util.concurrent.ConcurrentReaderHashMap;
 import EDU.oswego.cs.dl.util.concurrent.SynchronizedLong;
 
@@ -215,6 +219,24 @@ public class CacheService extends BaseComponentService implements CacheServiceMB
 	public String[] getNames() {		
 		return (String[]) cache.keySet().toArray(new String[cache.size()]);
 	}
+	
+	/**
+	 * Returns an array containing all the names currently used as keys in the cache that match the passed regex expression.
+	 * @param regex The regex expression to match.
+	 * @return An array of cache keys.
+	 */
+	public String[] getNames(String regex) {		
+		String[] names = (String[]) cache.keySet().toArray(new String[cache.size()]);
+		Pattern p = Pattern.compile(regex);
+		List matches = new ArrayList();
+		for(int i = 0; i < names.length; i++) {
+			if(p.matcher(names[i]).matches()) {
+				matches.add(names[i]);
+			}
+		}
+		return (String[])matches.toArray(new String[matches.size()]);
+	}
+	
 	
 	/**
 	 * The number of the entries in the cache.

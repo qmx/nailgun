@@ -66,6 +66,13 @@ public interface CacheServiceMBean {
 	 * @return An array of cache keys.
 	 */
 	public abstract String[] getNames();
+	
+	/**
+	 * Returns an array containing all the names currently used as keys in the cache that match the passed regex expression.
+	 * @param regex The regex expression to match.
+	 * @return An array of cache keys.
+	 */
+	public String[] getNames(String regex);
 
 	/**
 	 * The number of the entries in the cache.

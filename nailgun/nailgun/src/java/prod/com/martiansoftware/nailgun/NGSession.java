@@ -260,10 +260,12 @@ class NGSession extends Thread {
 				
 
 				boolean componentCall = false;
+				boolean nailMainComponentCall = false;
 				try {
 					Object[] methodArgs = new Object[1];
 					Method mainMethod = null; // will be either main(String[]) or nailMain(NGContext)
 					String[] cmdlineArgs = (String[]) remoteArgs.toArray(new String[remoteArgs.size()]);
+					String[] componentNailMainArgs = cmdlineArgs;
 					Class cmdclass = null;
 					Alias alias = null;
 					String componentMethodName = null;
@@ -277,6 +279,7 @@ class NGSession extends Thread {
 							err.println("ERROR:The command [" + command + "] could not be found");							
 						}
 						targetObject = componentAlias.getComponent();
+						// If the call is not to nailMain,we need to drop the first arg as it will be the method name.
 						// first arg is method name
 						// so grab the method name and recreate cmdlineArgs 
 						// minus the first arg
@@ -289,8 +292,13 @@ class NGSession extends Thread {
 						Class[] componentMethodSignature = new Class[cmdlineArgs.length];
 						for(int i = 0; i < cmdlineArgs.length; i++) {
 							componentMethodSignature[i] = java.lang.String.class;
-						}						
-						mainMethod =  targetObject.getClass().getMethod(componentMethodName, componentMethodSignature);
+						}
+						try {
+							mainMethod =  targetObject.getClass().getMethod(componentMethodName, componentMethodSignature);
+						} catch (NoSuchMethodException ignore) {
+							mainMethod =  targetObject.getClass().getMethod("nailMain", nailMainSignature);
+							nailMainComponentCall = true;
+						}
 					} else {
 						componentCall = false;
 						alias = server.getAliasManager().getAlias(command);
@@ -309,7 +317,7 @@ class NGSession extends Thread {
 					}
 
 					NGContext context = new NGContext();
-					context.setArgs(cmdlineArgs);
+										
 					context.in = in;
 					context.out = out;
 					context.err = err;
@@ -321,8 +329,11 @@ class NGSession extends Thread {
 					context.setPort(socket.getPort());
 					context.setWorkingDirectory(cwd);
 					methodArgs[0] = context;
-					if(componentCall) {
-						context.setApplicationContext(applicationContext);
+					context.setApplicationContext(applicationContext);
+					if(componentCall) {						
+						context.setArgs(componentNailMainArgs);
+					} else {
+						context.setArgs(cmdlineArgs);
 					}
 					
 					if (mainMethod == null) {
@@ -336,7 +347,11 @@ class NGSession extends Thread {
 					if (mainMethod != null) {
 						if(componentCall) {
 							NGSecurityManager.setExit(exit);
-							mainMethod.invoke(targetObject, cmdlineArgs);
+							if(nailMainComponentCall) {
+								mainMethod.invoke(targetObject, new Object[]{context});
+							} else {
+								mainMethod.invoke(targetObject, cmdlineArgs);
+							}
 						} else {
 							server.nailStarted(cmdclass);
 	                        NGSecurityManager.setExit(exit);
