@@ -57,12 +57,7 @@ public class CacheService extends BaseComponentService implements CacheServiceMB
 	protected ExpiryThread expiryThread = null;
 	
 	
-	/** The default JMX ObjectName for the CacheService management interface */
-	public static final String DEFAULT_OBJECT_NAME = "com.martiansoftware.components.cache:service=Cache";
-	
-	/** The default expiry thread sleeptime (ms) */
-	public static final long EXPIRE_THREAD_SLEEP_TIME = 60000;
-	
+
 	/**
 	 * Creates a new CacheService.
 	 * @param initialSize The initial size of the underlying cache HashMap.

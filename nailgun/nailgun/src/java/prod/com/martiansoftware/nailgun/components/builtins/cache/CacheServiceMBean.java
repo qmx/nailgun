@@ -25,6 +25,13 @@ package com.martiansoftware.nailgun.components.builtins.cache;
  *
  */
 public interface CacheServiceMBean {
+	
+	/** The default JMX ObjectName for the CacheService management interface */
+	public static final String DEFAULT_OBJECT_NAME = "com.martiansoftware.components.cache:service=Cache";
+	
+	/** The default expiry thread sleeptime (ms) */
+	public static final long EXPIRE_THREAD_SLEEP_TIME = 60000;
+	
 
 	/**
 	 * Adds or updates an exisitng cached object keyed by name.
