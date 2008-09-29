@@ -137,7 +137,7 @@ public class CacheService extends BaseComponentService implements CacheServiceMB
 	 */
 	public void put(String name, String cacheItem) {
 		put(name, (Object)cacheItem);
-		out("Cached [" + name + "]");
+		//out("Cached [" + name + "]");
 	}
 	
 	/**

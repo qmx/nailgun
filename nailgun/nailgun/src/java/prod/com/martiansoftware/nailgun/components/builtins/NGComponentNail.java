@@ -45,7 +45,7 @@ public class NGComponentNail {
 		// and the according method signature
 		String[] methodArgs = new String[args.length-2];
 		Class[] methodSignature = new Class[args.length-2];
-		System.arraycopy(args, 1,methodArgs, 0, args.length-2);
+		System.arraycopy(args, 2, methodArgs, 0, args.length-2);
 		for(int i = 0; i < args.length-2; i++) {
 			methodSignature[i] = String.class;
 		}
@@ -59,8 +59,8 @@ public class NGComponentNail {
 		}
 		try {
 			Object result = cMethod.invoke(component, methodArgs);
-			if(cMethod.getReturnType().equals(Void.class)) {
-				context.out.println("Invocation on [" + componentMethodName + "] Successful.");
+			if(cMethod.getReturnType().toString().equalsIgnoreCase("void")) {
+				context.out.println("Invocation on [" + componentName + "/" + componentMethodName + "] Successful.");
 			} else {
 				context.out.println(renderObject(result));
 			}
