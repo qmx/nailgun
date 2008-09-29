@@ -24,6 +24,8 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Properties;
 
+import com.martiansoftware.nailgun.components.NGApplicationContext;
+
 /**
  * <p>Provides quite a bit of potentially useful information to classes
  * specifically written for NailGun. The <a href="NGServer.html">NailGun server</a> itself, its
@@ -42,9 +44,15 @@ import java.util.Properties;
  * object will then be provided to <code>nailMain()</code>.
  * 
  * @author <a href="http://www.martiansoftware.com/contact.html">Marty Lamb </a>
+ * @author Nicholas Whitehead (nwhitehead at heliosdev dot org) 
  */
 public class NGContext {
-
+	
+	/**
+	 * The NGServer application context.
+	 */
+	private NGApplicationContext applicationContext = null;
+	
 	/**
 	 * The remote host's environment variables
 	 */
@@ -155,6 +163,10 @@ public class NGContext {
 	void setNGServer(NGServer server) {
 		this.server = server;
 	}
+	
+	void setNGApplicationContext(NGApplicationContext applicationContext) {
+		this.applicationContext = applicationContext;
+	}
 
 	/**
 	 * Returns a <code>java.util.Properties</code> object containing a copy
@@ -257,5 +269,19 @@ public class NGContext {
 		if ((iface == null) && (!getInetAddress().isLoopbackAddress())) {
 			throw (new SecurityException("Client is not local."));
 		}
+	}
+
+	/**
+	 * @return the applicationContext
+	 */
+	public NGApplicationContext getApplicationContext() {
+		return applicationContext;
+	}
+
+	/**
+	 * @param applicationContext the applicationContext to set
+	 */
+	public void setApplicationContext(NGApplicationContext applicationContext) {
+		this.applicationContext = applicationContext;
 	}
 }

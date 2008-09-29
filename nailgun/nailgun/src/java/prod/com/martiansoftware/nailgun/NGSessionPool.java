@@ -18,6 +18,8 @@
 
 package com.martiansoftware.nailgun;
 
+import com.martiansoftware.nailgun.components.NGApplicationContext;
+
 /**
  * Provides NGSession pooling functionality.  One parameter, "maxIdle",
  * governs its behavior by setting the maximum number of idle NGSession
@@ -26,8 +28,14 @@ package com.martiansoftware.nailgun;
  * a little extra responsiveness.
  * 
  * @author <a href="http://www.martiansoftware.com/contact.html">Marty Lamb</a>
+ * @author Nicholas Whitehead (nwhitehead at heliosdev dot org)
  */
 class NGSessionPool {
+	
+	/**
+	 * The NGServer's application context
+	 */
+	private NGApplicationContext applicationContext = null;	
 
 	/**
 	 * number of sessions to store in the pool
@@ -64,11 +72,12 @@ class NGSessionPool {
 	 * the specified number of threads
 	 * @param server the server to work for
 	 * @param poolsize the maximum number of idle threads to allow
+	 * @param applicationContext The NGServer's application context.
 	 */
-	NGSessionPool(NGServer server, int poolsize) {
+	NGSessionPool(NGServer server, int poolsize, NGApplicationContext applicationContext) {
 		this.server = server;
 		this.poolSize = Math.min(0, poolsize);
-	
+		this.applicationContext = applicationContext;
 		pool = new NGSession[poolSize];
 		poolEntries = 0;
 	}
@@ -81,7 +90,7 @@ class NGSessionPool {
 		NGSession result;
 		synchronized(lock) {
 			if (poolEntries == 0) {
-				result = new NGSession(this, server);
+				result = new NGSession(this, server, applicationContext);
 				result.start();
 			} else {
 				--poolEntries;

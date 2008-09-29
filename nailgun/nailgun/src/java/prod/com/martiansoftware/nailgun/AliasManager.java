@@ -23,11 +23,14 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
+import com.martiansoftware.nailgun.components.ComponentAlias;
+
 /**
  * An AliasManager is used to store and lookup command Aliases by name.
  * See <a href="Alias.html">Alias</a> for more details.
  * 
  * @author <a href="http://www.martiansoftware.com/contact.html">Marty Lamb</a>
+ * @author Nicholas Whitehead (nwhitehead at heliosdev dot org)
  */
 public class AliasManager {
 	
@@ -37,11 +40,18 @@ public class AliasManager {
 	private Map aliases;
 	
 	/**
+	 * component alias storage
+	 */
+	private Map componentAliases;
+	
+	
+	/**
 	 * Creates a new AliasManager, populating it with
 	 * default Aliases.
 	 */
 	public AliasManager() {
 		aliases = new java.util.HashMap();
+		componentAliases = new java.util.HashMap();
 		
 		try {
 			Properties props = new Properties();
@@ -95,6 +105,17 @@ public class AliasManager {
 	}
 	
 	/**
+	 * Adds a component Alias, replacing any previous entries with the
+	 * same name. 
+	 * @param alias the component Alias to add
+	 */
+	public void addComponentAlias(ComponentAlias alias) {
+		synchronized (componentAliases) {
+			componentAliases.put(alias.getName(), alias);
+		}
+	}	
+	
+	/**
 	 * Returns a Set that is a snapshot of the Alias list.
 	 * Modifications to this Set will not impact the AliasManager
 	 * in any way.
@@ -107,6 +128,20 @@ public class AliasManager {
 		}
 		return (result);
 	}
+	
+	/**
+	 * Returns a Set that is a snapshot of the ComponentAlias list.
+	 * Modifications to this Set will not impact the AliasManager
+	 * in any way.
+	 * @return a Set that is a snapshot of the ComponentAlias list.
+	 */
+	public Set getComponentAliases() {
+		Set result = new java.util.TreeSet();
+		synchronized(componentAliases) {
+			result.addAll(componentAliases.values());
+		}
+		return (result);
+	}	
 
 	/**
 	 * Removes the Alias with the specified name from the AliasManager.
@@ -118,6 +153,18 @@ public class AliasManager {
 			aliases.remove(aliasName);
 		}
 	}
+	
+	/**
+	 * Removes the ComponentAlias with the specified name from the AliasManager.
+	 * If no such ComponentAlias exists in this AliasManager, this method has no effect.
+	 * @param aliasName the name of the ComponentAlias to remove
+	 */
+	public void removeComponentAlias(String aliasName) {
+		synchronized (componentAliases) {
+			componentAliases.remove(aliasName);
+		}
+	}
+	
 
 	/**
 	 * Returns the Alias with the specified name
@@ -128,5 +175,15 @@ public class AliasManager {
 	public Alias getAlias(String aliasName) {
 		return ((Alias) aliases.get(aliasName));
 	}
+	
+	/**
+	 * Returns the ComponentAlias with the specified name
+	 * @param aliasName the name of the ComponentAlias to retrieve
+	 * @return the requested ComponentAlias, or null if no such ComponentAlias
+	 * is defined in this AliasManager.
+	 */
+	public ComponentAlias getComponentAlias(String aliasName) {
+		return ((ComponentAlias) componentAliases.get(aliasName));
+	}	
 
 }

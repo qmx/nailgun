@@ -17,6 +17,8 @@
 */
 
 package com.martiansoftware.nailgun;
+import java.io.File;
+import java.io.FilenameFilter;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Method;
@@ -24,10 +26,14 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import com.martiansoftware.nailgun.builtins.DefaultNail;
+import com.martiansoftware.nailgun.components.ComponentAlias;
+import com.martiansoftware.nailgun.components.NGApplicationContext;
 
 /**
  * <p>Listens for new connections from NailGun clients and launches
@@ -38,6 +44,7 @@ import com.martiansoftware.nailgun.builtins.DefaultNail;
  * interaction with the application.</p>
  * 
  * @author <a href="http://www.martiansoftware.com/contact.html">Marty Lamb</a>
+ * @author Nicholas Whitehead (nwhitehead at heliosdev dot org)
  */
 public class NGServer implements Runnable {
 
@@ -119,6 +126,21 @@ public class NGServer implements Runnable {
 	private SecurityManager originalSecurityManager = null;
 	
 	/**
+	 * Determines if spring is enabled.
+	 */
+	private static boolean springEnabled = false;
+	
+	/**
+	 * Determines if the running JVM is Java 1.5 or above.
+	 */
+	private static boolean java15plus = false;
+	
+	/**
+	 * The NGServer components Spring application context.
+	 */
+	private NGApplicationContext applicationContext = null;
+	
+	/**
 	 * Creates a new NGServer that will listen at the specified address and
 	 * on the specified port with the specified session pool size.
 	 * This does <b>not</b> cause the server to start listening.  To do
@@ -127,10 +149,11 @@ public class NGServer implements Runnable {
 	 * @param addr the address at which to listen, or <code>null</code> to bind
 	 * to all local addresses
 	 * @param port the port on which to listen.
-         * @param sessionPoolSize the max number of idle sessions allowed by the pool
+     * @param sessionPoolSize the max number of idle sessions allowed by the pool
+     * @param applicationContext The NGServer component application context
 	 */
-	public NGServer(InetAddress addr, int port, int sessionPoolSize) {
-		init(addr, port, sessionPoolSize);
+	public NGServer(InetAddress addr, int port, int sessionPoolSize, NGApplicationContext applicationContext) {
+		init(addr, port, sessionPoolSize, applicationContext);
 	}
 	
 	/**
@@ -142,10 +165,10 @@ public class NGServer implements Runnable {
 	 * @param addr the address at which to listen, or <code>null</code> to bind
 	 * to all local addresses
 	 * @param port the port on which to listen.
-         * @param sessionPoolSize the max number of idle sessions allowed by the pool
+     * @param sessionPoolSize the max number of idle sessions allowed by the pool
 	 */
 	public NGServer(InetAddress addr, int port) {
-		init(addr, port, DEFAULT_SESSIONPOOLSIZE);
+		init(addr, port, DEFAULT_SESSIONPOOLSIZE, null);
 	}
 
         /**
@@ -156,24 +179,33 @@ public class NGServer implements Runnable {
 	 * and start it.
 	 */
 	public NGServer() {
-		init(null, NGConstants.DEFAULT_PORT, DEFAULT_SESSIONPOOLSIZE);
+		init(null, NGConstants.DEFAULT_PORT, DEFAULT_SESSIONPOOLSIZE, null);
 	}
 	
 	/**
 	 * Sets up the NGServer internals
 	 * @param addr the InetAddress to bind to
 	 * @param port the port on which to listen
-         * @param sessionPoolSize the max number of idle sessions allowed by the pool
+     * @param sessionPoolSize the max number of idle sessions allowed by the pool
+     * @param applicationContext The NGServer component application context
 	 */
-	private void init(InetAddress addr, int port, int sessionPoolSize) {
+	private void init(InetAddress addr, int port, int sessionPoolSize, NGApplicationContext applicationContext) {
 		this.addr = addr;
 		this.port = port;
-		
+		this.applicationContext = applicationContext;		
 		this.aliasManager = new AliasManager();
+		// populate component aliases
+		String[] beanNames = applicationContext.getBeanDefinitionNames();
+		if(beanNames != null) {
+			for(int i = 0; i < beanNames.length; i++) {
+				ComponentAlias calias = new ComponentAlias(beanNames[i], "Spring Bean:" + applicationContext.getBean(beanNames[i]).getClass().getName(), applicationContext);
+				aliasManager.addComponentAlias(calias);				
+			}
+		}
 		allNailStats = new java.util.HashMap();
 		// allow a maximum of 10 idle threads.  probably too high a number
 		// and definitely should be configurable in the future
-		sessionPool = new NGSessionPool(this, sessionPoolSize);
+		sessionPool = new NGSessionPool(this, sessionPoolSize, applicationContext);
 	}
 
 	/**
@@ -417,36 +449,118 @@ public class NGServer implements Runnable {
 	}
 	
 	private static void usage() {
-		System.err.println("Usage: java com.martiansoftware.nailgun.NGServer");
-		System.err.println("   or: java com.martiansoftware.nailgun.NGServer port");
-		System.err.println("   or: java com.martiansoftware.nailgun.NGServer IPAddress");
-		System.err.println("   or: java com.martiansoftware.nailgun.NGServer IPAddress:port");
+		System.err.println("Usage: java com.martiansoftware.nailgun.NGServer [springdir=dir1,dir2,dir3.....dirn]");
+		System.err.println("   or: java com.martiansoftware.nailgun.NGServer port [springdir=dir1,dir2,dir3.....dirn]");
+		System.err.println("   or: java com.martiansoftware.nailgun.NGServer IPAddress [springdir=dir1,dir2,dir3.....dirn]");
+		System.err.println("   or: java com.martiansoftware.nailgun.NGServer IPAddress:port [springdir=dir1,dir2,dir3.....dirn]");
 	}
 	
 	/**
-	 * Creates and starts a new <code>NGServer</code>.  A single optional
+	 * Creates and starts a new <code>NGServer</code>.  
+	 * There are two optional parameters:<ul>
+	 * <li><b>The NGServer listening interface</b>: This specified which IPAddress and port NGServer will listen on. It can be specified as: <ul>
+	 * <li><b>IPAddress</b>: NGServer will bind to <code>NGServer.DEFAULT_PORT</code> on this address.</li>
+	 * <li><b>port</b>: NGServer will bind to this port on all addresses.</li>
+	 * <li><b>IPAddress:port</b>NGServer will bind to the specified port on the specified address.</li>
+	 * <li><b>If omitted</b>: Will listen on <code>NGServer.DEFAULT_PORT</code> on all addresses.</li>
+	 * </ul>
+	 * </li>
+	 * <li><b>springdir=dir1,dir2,dir3.....dirn</b>: This parameter indicates that the Spring based NGServer component module should be loaded. 
+	 * The = sign should be followed by a list of comma separated directories that will be searched for *.xml files that will be loaded by the Spring
+	 * bean factory. If the list is blank or references no valid directories, a warning will be emitted then the parameter will be ignored. 
+	 * If the parameter is omitted or ignored, the NGServer Component module will not be activated.</li>
+	 * </ul>
+	 * A single optional
 	 * argument is valid, specifying the port on which this <code>NGServer</code>
 	 * should listen.  If omitted, <code>NGServer.DEFAULT_PORT</code> will be used.
 	 * @param args a single optional argument specifying the port on which to listen.
 	 * @throws NumberFormatException if a non-numeric port is specified
 	 */
 	public static void main(String[] args) throws NumberFormatException, UnknownHostException {
-
-		if (args.length > 1) {
+		NGApplicationContext appContext = null; 
+		if (args.length > 2) {
 			usage();
 			return;
 		}
+		
+		// figure out which arg is which and assign to one of these vars.
+		String listeningArg = null;  // the ipaddress and port argument.
+		String springDirArg = null;  // the springdir argument.
+		for(int i = 0; i < args.length; i++) {
+			if(args[i] != null && args[i].toUpperCase().startsWith("SPRINGDIR")) {
+				if(springDirArg != null) {
+					usage();
+					return;
+				}
+				springDirArg = args[i];
+			} else {
+				if(args[i] != null) {
+					if(listeningArg != null) {
+						usage();
+						return;
+					}
+					listeningArg = args[i];
+				}
+			}
+		}
+		
+		// set the JVM version flag
+		setJavaVersion();
 
 		// null server address means bind to everything local
 		InetAddress serverAddress = null;
 		int port = NGConstants.DEFAULT_PORT;
 		
-		// parse the sole command line parameter, which
+		// parse the springdir command if it is not null
+		List springDirList = new ArrayList();  // a list of valid directories 
+		if(springDirArg != null) {
+			XMLFileNameFilter fileFilter = new XMLFileNameFilter();
+			try {
+				String[] springDirectories = springDirArg.split("=")[1].split(",");
+				if(springDirectories==null || springDirectories.length<1) {
+					springEnabled = false;
+				} else {
+					// For each defined directory, check to see if it exists and is a dir.
+					// If there are no valid directories, the spring module will not be loaded.
+					for(int x = 0; x < springDirectories.length; x++) {
+						String dirName = springDirectories[x];
+						File f = new File(dirName);
+						if(f.isDirectory()) {
+							//springDirList.add(f.getAbsolutePath());
+							String[] files = f.list(fileFilter);
+							if(files!=null) {
+								for(int i = 0; i < files.length; i++) {
+									springDirList.add(f.getAbsolutePath() + File.separator + files[i]);
+								}
+							}
+						}
+					}
+					if(springDirList.size() > 0) {
+						springEnabled = true;
+						System.out.println("Enabling NGServer Components. Descriptors are: [" + springDirList + "]" );
+						appContext = new NGApplicationContext(springDirList);
+						System.out.println("Starting NGServer Component Context");
+						//applicationContext.refresh();
+						appContext.start();
+						System.out.println("Started NGServer Component Context");
+						// load spring module here.
+					} else {
+						System.out.println("NGServer Components requested but no valid directories supplied. Disabling NGServer Components.");
+						springEnabled = false;
+					}
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+				springEnabled = false;
+			}
+		}
+		
+		// parse the listening command line parameter, which
 		// may be an inetaddress to bind to, a port number,
 		// or an inetaddress followed by a port, separated
 		// by a colon
-		if (args.length != 0) {
-			String[] argParts = args[0].split(":");
+		if (listeningArg != null) {
+			String[] argParts = listeningArg.split(":");
 			String addrPart = null;
 			String portPart = null;
 			if (argParts.length == 2) {
@@ -465,7 +579,7 @@ public class NGServer implements Runnable {
 			}
 		}
 
-		NGServer server = new NGServer(serverAddress, port, DEFAULT_SESSIONPOOLSIZE);
+		NGServer server = new NGServer(serverAddress, port, DEFAULT_SESSIONPOOLSIZE, appContext);
 		Thread t = new Thread(server);
 		t.setName("NGServer(" + serverAddress + ", " + port + ")");
 		t.start();
@@ -488,6 +602,20 @@ public class NGServer implements Runnable {
 		                    + ", port " 
 							+ runningPort 
 							+ ".");
+	}
+	
+	
+	/**
+	 * Checks the JVM environment and sets the static var <code>java15plus</code>
+	 * to true if the JVM is 1.5+, or to false if it is not.
+	 */
+	private static void setJavaVersion() {
+		try {
+			Class.forName("java.lang.Enum");
+			java15plus = true;
+		} catch (Throwable t) {
+			java15plus = false;
+		}
 	}
 
 	/**
@@ -525,4 +653,26 @@ public class NGServer implements Runnable {
 			}
 		}
 	}
+
+	/**
+	 * Determines if Spring is enabled.
+	 * @return true if spring is enabled, false if it is not.
+	 */
+	public static boolean isSpringEnabled() {
+		return springEnabled;
+	}
+
+	/**
+	 * Determines if the current JVM is Java 1.5 or above.
+	 * @return true if the current JVM is 1.5+, false if it is below.
+	 */
+	public static boolean isJava15Plus() {
+		return java15plus;
+	}
+}
+
+class XMLFileNameFilter implements FilenameFilter {
+	public boolean accept(File dir, String name) {		
+		return name.toUpperCase().endsWith(".XML");
+	}	
 }

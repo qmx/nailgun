@@ -28,6 +28,9 @@ import java.util.Properties;
 
 import org.apache.tools.ant.ExitException;
 
+import com.martiansoftware.nailgun.components.ComponentAlias;
+import com.martiansoftware.nailgun.components.NGApplicationContext;
+
 /**
  * Reads the NailGun stream from the client through the command,
  * then hands off processing to the appropriate class.  The NGSession
@@ -35,6 +38,7 @@ import org.apache.tools.ant.ExitException;
  * NGSession.
  * 
  * @author <a href="http://www.martiansoftware.com/contact.html">Marty Lamb</a>
+ * @author Nicholas Whitehead (nwhitehead at heliosdev dot org)
  */
 class NGSession extends Thread {
 
@@ -42,6 +46,11 @@ class NGSession extends Thread {
 	 * The server this NGSession is working for
 	 */
 	private NGServer server = null;
+	
+	/**
+	 * The NGServer's application context
+	 */
+	private NGApplicationContext applicationContext = null;
 	
 	/**
 	 * The pool this NGSession came from, and to which it will
@@ -106,11 +115,13 @@ class NGSession extends Thread {
 	 * NGServer.
 	 * @param sessionPool The NGSessionPool we're working for
 	 * @param server The NGServer we're working for
+	 * @param applicationContext The NGServer's application context.
 	 */
-	NGSession(NGSessionPool sessionPool, NGServer server) {
+	NGSession(NGSessionPool sessionPool, NGServer server, NGApplicationContext applicationContext) {
 		super();
 		this.sessionPool = sessionPool;
 		this.server = server;
+		this.applicationContext = applicationContext;
 	
 		synchronized(sharedLock) {
 			this.instanceNumber = ++instanceCounter;
@@ -247,38 +258,71 @@ class NGSession extends Thread {
 				((ThreadLocalPrintStream) System.out).init(out);
 				((ThreadLocalPrintStream) System.err).init(err);
 				
-				try {
-					Alias alias = server.getAliasManager().getAlias(command);
-					Class cmdclass = null;
-					if (alias != null) {
-						cmdclass = alias.getAliasedClass();
-					} else if (server.allowsNailsByClassName()) {
-						cmdclass = Class.forName(command);
-					} else {
-						cmdclass = server.getDefaultNailClass();
-					}
 
+				boolean componentCall = false;
+				try {
 					Object[] methodArgs = new Object[1];
 					Method mainMethod = null; // will be either main(String[]) or nailMain(NGContext)
 					String[] cmdlineArgs = (String[]) remoteArgs.toArray(new String[remoteArgs.size()]);
-					
-					try {
-						mainMethod = cmdclass.getMethod("nailMain", nailMainSignature);
-						NGContext context = new NGContext();
-						context.setArgs(cmdlineArgs);
-						context.in = in;
-						context.out = out;
-						context.err = err;
-						context.setCommand(command);
-						context.setExitStream(exit);
-						context.setNGServer(server);
-						context.setEnv(remoteEnv);
-						context.setInetAddress(socket.getInetAddress());
-						context.setPort(socket.getPort());
-						context.setWorkingDirectory(cwd);
-						methodArgs[0] = context;
-					} catch (NoSuchMethodException toDiscard) {
-						// that's ok - we'll just try main(String[]) next.
+					Class cmdclass = null;
+					Alias alias = null;
+					String componentMethodName = null;
+					ComponentAlias componentAlias = null;
+					Object targetObject = null;
+					if(command.toUpperCase().startsWith("C:")) {
+						command = command.substring(2);
+						componentCall = true;
+						componentAlias = server.getAliasManager().getComponentAlias(command);
+						if(componentAlias==null) {
+							err.println("ERROR:The command [" + command + "] could not be found");							
+						}
+						targetObject = componentAlias.getComponent();
+						// first arg is method name
+						// so grab the method name and recreate cmdlineArgs 
+						// minus the first arg
+						componentMethodName = cmdlineArgs[0];
+						String[] tmp = new String[cmdlineArgs.length-1];
+						if(tmp.length > 0) {
+							System.arraycopy(cmdlineArgs, 1, tmp, 0, tmp.length);
+						}
+						cmdlineArgs = tmp;
+						Class[] componentMethodSignature = new Class[cmdlineArgs.length];
+						for(int i = 0; i < cmdlineArgs.length; i++) {
+							componentMethodSignature[i] = java.lang.String.class;
+						}						
+						mainMethod =  targetObject.getClass().getMethod(componentMethodName, componentMethodSignature);
+					} else {
+						componentCall = false;
+						alias = server.getAliasManager().getAlias(command);
+						if (alias != null) {
+							cmdclass = alias.getAliasedClass();
+						} else if (server.allowsNailsByClassName()) {
+							cmdclass = Class.forName(command);
+						} else {
+							cmdclass = server.getDefaultNailClass();
+						}		
+						try {
+							mainMethod = cmdclass.getMethod("nailMain", nailMainSignature);
+						} catch (NoSuchMethodException ignore) {
+							// ok since we'll assume a call to main.
+						}
+					}
+
+					NGContext context = new NGContext();
+					context.setArgs(cmdlineArgs);
+					context.in = in;
+					context.out = out;
+					context.err = err;
+					context.setCommand(command);
+					context.setExitStream(exit);
+					context.setNGServer(server);
+					context.setEnv(remoteEnv);
+					context.setInetAddress(socket.getInetAddress());
+					context.setPort(socket.getPort());
+					context.setWorkingDirectory(cwd);
+					methodArgs[0] = context;
+					if(componentCall) {
+						context.setApplicationContext(applicationContext);
 					}
 					
 					if (mainMethod == null) {
@@ -286,20 +330,28 @@ class NGSession extends Thread {
 						methodArgs[0] = cmdlineArgs;
 					}
 					
+					
+						
+					
 					if (mainMethod != null) {
-						server.nailStarted(cmdclass);
-                        NGSecurityManager.setExit(exit);
-
-						try {
-							mainMethod.invoke(null, methodArgs);
-						} catch (InvocationTargetException ite) {
-							throw(ite.getCause());
-						} catch (Throwable t) {
-							throw(t);
-						} finally {
-							server.nailFinished(cmdclass);
+						if(componentCall) {
+							NGSecurityManager.setExit(exit);
+							mainMethod.invoke(targetObject, cmdlineArgs);
+						} else {
+							server.nailStarted(cmdclass);
+	                        NGSecurityManager.setExit(exit);
+	
+							try {
+								mainMethod.invoke(null, methodArgs);
+							} catch (InvocationTargetException ite) {
+								throw(ite.getCause());
+							} catch (Throwable t) {
+								throw(t);
+							} finally {
+								server.nailFinished(cmdclass);
+							}
+							exit.println(0);
 						}
-						exit.println(0);
 					}
 
 				} catch (ExitException exitEx) {
