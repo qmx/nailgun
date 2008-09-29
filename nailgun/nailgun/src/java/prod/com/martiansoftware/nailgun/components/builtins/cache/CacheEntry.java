@@ -113,12 +113,12 @@ public class CacheEntry {
 	 * @param currentTime The current time of the text.
 	 * @return true if item was expired, false if not.
 	 */
-	public boolean testForExpiration(long currentTime) {
-		BaseComponentService.cout("Expiry Thread- Checking [" + name + "]");
+	public boolean testForExpiration(long currentTime) {		
 		if(timeOut > 0) {			
+			BaseComponentService.cout("[" + Thread.currentThread().getName() + "]- Checking [" + name + "]");
 			if(currentTime-lastAccess.get() >= timeOut) {
 				// item has expired.
-				BaseComponentService.cout("Expiry Thread- Expiring [" + name + "]");
+				BaseComponentService.cout("[" + Thread.currentThread().getName() + "]- Expiring [" + name + "]");
 				cache.remove(name);
 				expirations.increment();
 				return true;

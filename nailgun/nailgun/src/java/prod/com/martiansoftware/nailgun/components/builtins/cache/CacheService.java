@@ -174,11 +174,11 @@ public class CacheService extends BaseComponentService implements CacheServiceMB
 		try {
 			CacheEntry entry = (CacheEntry)cache.get(name);
 			if(entry==null) {
-				out("ERROR:No value found for key [" + name + "]");
+				//out("ERROR:No value found for key [" + name + "]");
 				return null;
 			} else {
 				retValue = entry.get();
-				out(retValue);
+				//out(retValue);
 				return retValue;
 			}
 		} finally {
@@ -188,8 +188,7 @@ public class CacheService extends BaseComponentService implements CacheServiceMB
 				getHitCount.increment();
 			} else {
 				getMissCount.increment();
-			}
-			
+			}			
 		}
 	}
 	

@@ -22,6 +22,8 @@ import java.io.PrintStream;
 import java.util.Iterator;
 import java.util.Map;
 
+import EDU.oswego.cs.dl.util.concurrent.SynchronizedInt;
+
 import com.martiansoftware.nailgun.components.builtins.base.BaseComponentService;
 
 /**
@@ -34,6 +36,7 @@ public class ExpiryThread extends Thread {
 	protected Map cache = null;
 	protected long sleepTime = 0L;
 	protected PrintStream out = null;
+	protected static SynchronizedInt serial = new SynchronizedInt(0); 
 	
 	/**
 	 * Creates a new expiry thread.
@@ -44,6 +47,8 @@ public class ExpiryThread extends Thread {
 		this.cache = cache;
 		this.sleepTime = sleepTime;
 		this.setDaemon(true);
+		serial.increment();
+		this.setName("Expiry Thread#" + serial.get());
 		out = System.out;
 	}
 	
