@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.net.Socket;
 import java.util.Properties;
 
 import com.martiansoftware.nailgun.components.NGApplicationContext;
@@ -47,6 +48,11 @@ import com.martiansoftware.nailgun.components.NGApplicationContext;
  * @author Nicholas Whitehead (nwhitehead at heliosdev dot org) 
  */
 public class NGContext {
+	
+	/**
+	 * The client serving socket
+	 */
+	protected Socket clientSocket = null;
 	
 	/**
 	 * The NGServer application context.
@@ -283,5 +289,19 @@ public class NGContext {
 	 */
 	public void setApplicationContext(NGApplicationContext applicationContext) {
 		this.applicationContext = applicationContext;
+	}
+
+	/**
+	 * @return the clientSocket
+	 */
+	public Socket getClientSocket() {
+		return clientSocket;
+	}
+
+	/**
+	 * @param clientSocket the clientSocket to set
+	 */
+	public void setClientSocket(Socket clientSocket) {
+		this.clientSocket = clientSocket;
 	}
 }

@@ -30,6 +30,7 @@ import org.apache.tools.ant.ExitException;
 
 import com.martiansoftware.nailgun.components.ComponentAlias;
 import com.martiansoftware.nailgun.components.NGApplicationContext;
+import com.martiansoftware.nailgun.components.SocketHandler;
 
 /**
  * Reads the NailGun stream from the client through the command,
@@ -261,6 +262,7 @@ class NGSession extends Thread {
 
 				boolean componentCall = false;
 				boolean nailMainComponentCall = false;
+				Object targetObject = null;
 				try {
 					Object[] methodArgs = new Object[1];
 					Method mainMethod = null; // will be either main(String[]) or nailMain(NGContext)
@@ -270,7 +272,7 @@ class NGSession extends Thread {
 					Alias alias = null;
 					String componentMethodName = null;
 					ComponentAlias componentAlias = null;
-					Object targetObject = null;
+					
 					if(command.toUpperCase().startsWith("C:")) {
 						command = command.substring(2);
 						componentCall = true;
@@ -325,6 +327,7 @@ class NGSession extends Thread {
 					context.setExitStream(exit);
 					context.setNGServer(server);
 					context.setEnv(remoteEnv);
+					context.setClientSocket(socket);
 					context.setInetAddress(socket.getInetAddress());
 					context.setPort(socket.getPort());
 					context.setWorkingDirectory(cwd);
@@ -376,8 +379,13 @@ class NGSession extends Thread {
 					t.printStackTrace();
 					exit.println(NGConstants.EXIT_EXCEPTION); // remote exception constant
 				}
+				// If the call was to a component, 
+				// and that component implements the SocketHandler interface
+				// then the socket should not be closed as it will be closed by the component.
+				if(!componentCall && !(targetObject instanceof SocketHandler)) {
+					socket.close();
+				}
 				
-				socket.close();
 	
 			} catch (Throwable t) {
 				t.printStackTrace();
