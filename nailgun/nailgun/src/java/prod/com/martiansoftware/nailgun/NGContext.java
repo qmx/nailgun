@@ -50,6 +50,11 @@ import com.martiansoftware.nailgun.components.NGApplicationContext;
 public class NGContext {
 	
 	/**
+	 * Indicates if call is a direct component call or a nail call
+	 */
+	protected boolean directComponentCall = false;
+	
+	/**
 	 * The client serving socket
 	 */
 	protected Socket clientSocket = null;
@@ -162,7 +167,7 @@ public class NGContext {
 		this.remoteHost = remoteHost;
 	}
 
-	void setArgs(String[] args) {
+	public void setArgs(String[] args) {
 		this.args = args;
 	}
 
@@ -299,9 +304,25 @@ public class NGContext {
 	}
 
 	/**
+	 * Sets if if call is a direct component call or a nail call
 	 * @param clientSocket the clientSocket to set
 	 */
 	public void setClientSocket(Socket clientSocket) {
 		this.clientSocket = clientSocket;
+	}
+
+	/**
+	 * Indicates if call is a direct component call or a nail call
+	 * @return the directComponentCall
+	 */
+	public boolean isDirectComponentCall() {
+		return directComponentCall;
+	}
+
+	/**
+	 * @param directComponentCall the directComponentCall to set
+	 */
+	public void setDirectComponentCall(boolean directComponentCall) {
+		this.directComponentCall = directComponentCall;
 	}
 }
