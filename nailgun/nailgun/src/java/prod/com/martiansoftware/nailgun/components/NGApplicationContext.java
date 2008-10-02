@@ -22,7 +22,14 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
+import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
@@ -30,12 +37,6 @@ import org.springframework.context.MessageSourceResolvable;
 import org.springframework.context.NoSuchMessageException;
 import org.springframework.context.support.FileSystemXmlApplicationContext;
 import org.springframework.core.io.Resource;
-import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.BeanFactory;
-import org.springframework.beans.factory.NoSuchBeanDefinitionException;
-import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
-import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 
 /**
  * <p>Title:NGApplicationContext</p>
@@ -46,9 +47,9 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 public class NGApplicationContext implements BeanFactory {
 	
 	protected FileSystemXmlApplicationContext appContext = null;
-	protected List configDirs = null;
+	protected Set configDirs = null;
 	
-	public NGApplicationContext(List configDirs) {
+	public NGApplicationContext(Set configDirs) {
 		this.configDirs = configDirs;
 		//appContext = new FileSystemXmlApplicationContext((String[])configDirs.toArray(new String[configDirs.size()]), true);
 		appContext = new FileSystemXmlApplicationContext();
