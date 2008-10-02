@@ -20,6 +20,7 @@ package com.martiansoftware.nailgun.components.builtins;
 
 import java.lang.reflect.Method;
 import com.martiansoftware.nailgun.NGContext;
+import com.martiansoftware.nailgun.components.builtins.base.BaseComponentService;
 
 
 /**
@@ -41,32 +42,58 @@ public class NGComponentNail {
 		if(component==null) {
 			context.err.println("ERROR: [NGComponentNail] No NG Component Located for name [" + componentName + "]");
 		}
-		// Create args array minus the first two parama which are the bean name and method name
-		// and the according method signature
-		String[] methodArgs = new String[args.length-2];
-		Class[] methodSignature = new Class[args.length-2];
-		System.arraycopy(args, 2, methodArgs, 0, args.length-2);
-		for(int i = 0; i < args.length-2; i++) {
-			methodSignature[i] = String.class;
+		// Create args array 
+		// if this is a direct component call
+		//    ----> minus the first two params which are the bean name and method name
+		// otherwise
+		//    ----> minus the first param which is the bean name
+		// then the according method signature
+ 
+		int paramsToRemove = 0;
+		if(context.isDirectComponentCall()) {
+			paramsToRemove = 2;
+		} else {
+			paramsToRemove = 1;
 		}
-		// See if the methodArgs match a method
+		// Now create the args and sig
+		String[] methodArgs = new String[args.length-paramsToRemove];
+		Class[] methodSignature = null;
+		System.arraycopy(args, paramsToRemove, methodArgs, 0, args.length-paramsToRemove);
+		if(context.isDirectComponentCall()) {
+			methodSignature = new Class[args.length-paramsToRemove];
+			for(int i = 0; i < args.length-paramsToRemove; i++) {
+				methodSignature[i] = String.class;
+			}			
+		} else {
+			methodSignature = new Class[]{NGContext.class};
+			componentMethodName = "nailMain";
+			context.setArgs(methodArgs);
+		}
+		// if this is a direct component call, we need to locate the method.
+		// if not, we know the method is nailMain(NGContext)
 		Method cMethod = null;
 		try {
 			cMethod = component.getClass().getMethod(componentMethodName, methodSignature);
 		} catch (NoSuchMethodException noMethod) {
-			context.err.println("ERROR: [" + componentName + "] No Method Found for [" + componentMethodName + "]");
+			BaseComponentService.reportError("[" + componentName + "] No Method Found for [" + componentMethodName + "]", 
+					BaseComponentService.err, context.err);
 			return;
-		}
+		}			
 		try {
-			Object result = cMethod.invoke(component, methodArgs);
+			Object[] invokeParams = null;
+			if(context.isDirectComponentCall()) {
+				invokeParams = methodArgs;
+			} else {
+				invokeParams = new Object[]{context};
+			}
+			Object result = cMethod.invoke(component, invokeParams);
 			if(cMethod.getReturnType().toString().equalsIgnoreCase("void")) {
-				context.out.println("Invocation on [" + componentName + "/" + componentMethodName + "] Successful.");
+				context.out.println("Successful Invocation on [" + componentName + "/" + componentMethodName + "].");
 			} else {
 				context.out.println(renderObject(result));
-			}
-			
-		} catch (Exception e) {
-			context.err.println("ERROR: [" + componentMethodName + "] Exception Invoking [" + componentMethodName + "]:" + e);
+			}			
+		} catch (Exception e) {			
+			BaseComponentService.reportError("[" + componentMethodName + "] Exception Invoking [" + componentMethodName + "]:" + e,	BaseComponentService.err, context.err);
 			return;			
 		}
 		
