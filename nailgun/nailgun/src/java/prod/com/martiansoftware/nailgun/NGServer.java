@@ -26,14 +26,15 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.martiansoftware.nailgun.builtins.DefaultNail;
 import com.martiansoftware.nailgun.components.ComponentAlias;
 import com.martiansoftware.nailgun.components.NGApplicationContext;
+import com.martiansoftware.nailgun.components.NGReference;
 
 /**
  * <p>Listens for new connections from NailGun clients and launches
@@ -48,10 +49,10 @@ import com.martiansoftware.nailgun.components.NGApplicationContext;
  */
 public class NGServer implements Runnable {
 
-        /**
-         * Default size for thread pool
-         */
-        public static final int DEFAULT_SESSIONPOOLSIZE = 10;
+    /**
+     * Default size for thread pool
+     */
+    public static final int DEFAULT_SESSIONPOOLSIZE = 10;
         
 	/**
 	 * The address on which to listen, or null to listen on all
@@ -206,6 +207,21 @@ public class NGServer implements Runnable {
 		// allow a maximum of 10 idle threads.  probably too high a number
 		// and definitely should be configurable in the future
 		sessionPool = new NGSessionPool(this, sessionPoolSize, applicationContext);
+		// if components are enabled, and the NGReference bean is registered,
+		// populate the values.
+		if(isSpringEnabled()) {
+			try {
+				NGReference ref = (NGReference)applicationContext.getBean("NGReference");
+				if(ref==null) throw new Exception();
+				ref.setServer(this);
+				ref.setAliasManager(aliasManager);
+				ref.setSessionPool(sessionPool);
+				System.out.println("NGReference Loaded.");
+			} catch (Exception e) {
+				System.out.println("NGReference could not be located.");
+			}
+			
+		} 
 	}
 
 	/**
@@ -510,50 +526,26 @@ public class NGServer implements Runnable {
 		// null server address means bind to everything local
 		InetAddress serverAddress = null;
 		int port = NGConstants.DEFAULT_PORT;
-		
-		// parse the springdir command if it is not null
-		List springDirList = new ArrayList();  // a list of valid directories 
-		if(springDirArg != null) {
-			XMLFileNameFilter fileFilter = new XMLFileNameFilter();
-			try {
-				String[] springDirectories = springDirArg.split("=")[1].split(",");
-				if(springDirectories==null || springDirectories.length<1) {
-					springEnabled = false;
-				} else {
-					// For each defined directory, check to see if it exists and is a dir.
-					// If there are no valid directories, the spring module will not be loaded.
-					for(int x = 0; x < springDirectories.length; x++) {
-						String dirName = springDirectories[x];
-						File f = new File(dirName);
-						if(f.isDirectory()) {
-							//springDirList.add(f.getAbsolutePath());
-							String[] files = f.list(fileFilter);
-							if(files!=null) {
-								for(int i = 0; i < files.length; i++) {
-									springDirList.add(f.getAbsolutePath() + File.separator + files[i]);
-								}
-							}
-						}
-					}
-					if(springDirList.size() > 0) {
-						springEnabled = true;
-						System.out.println("Enabling NGServer Components. Descriptors are: [" + springDirList + "]" );
-						appContext = new NGApplicationContext(springDirList);
-						System.out.println("Starting NGServer Component Context");
-						//applicationContext.refresh();
-						appContext.start();
-						System.out.println("Started NGServer Component Context");
-						// load spring module here.
-					} else {
-						System.out.println("NGServer Components requested but no valid directories supplied. Disabling NGServer Components.");
-						springEnabled = false;
-					}
-				}
-			} catch (Exception e) {
-				e.printStackTrace();
+		String[] springDirectories = springDirArg.split("=")[1].split(",");
+		Set springDirList = recurseDirectory(springDirectories, new ConfigurableFileExtensionFilter(".xml"), new DirectoryFilter());		
+		try {
+			if(springDirList.size() > 0) {
+				springEnabled = true;
+				System.out.println("Enabling NGServer Components. Descriptors are: [" + springDirList + "]" );
+				appContext = new NGApplicationContext(springDirList);
+				System.out.println("Starting NGServer Component Context");
+				appContext.start();
+				System.out.println("Started NGServer Component Context");
+			} else {
+				System.out.println("NGServer Components requested but no valid directories supplied. Disabling NGServer Components.");
 				springEnabled = false;
 			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			springEnabled = false;			
 		}
+		
+
 		
 		// parse the listening command line parameter, which
 		// may be an inetaddress to bind to, a port number,
@@ -669,10 +661,56 @@ public class NGServer implements Runnable {
 	public static boolean isJava15Plus() {
 		return java15plus;
 	}
+	
+
+	/**
+	 * Recurses through an directories and returns a set of files matching the passed file filter.
+	 * @param dirNames Ann array of directory names to start at
+	 * @param filter A file name filter
+	 * @param df A directory filter
+	 * @return A set of located files
+	 */
+	public static Set recurseDirectory(String[] dirNames, FilenameFilter filter, FilenameFilter df) {
+		Set matches = new HashSet();
+		if(dirNames==null || dirNames.length < 1) return matches;
+		for(int c = 0; c < dirNames.length; c++) {
+			File dir = new File(dirNames[c]);
+			if(!dir.exists() || !dir.isDirectory()) continue;			
+			// get xml files in this dir.
+			String[] files = dir.list(filter);
+			for(int i=0; i < files.length; i++) {
+				matches.add(dir.getAbsolutePath() + File.separator + files[i]);
+			}
+			// process each dir in this dir
+			String[] subDirList = dir.list(df);
+			for(int i=0; i < subDirList.length; i++) {
+				subDirList[i] = dir.getAbsolutePath() + File.separator + subDirList[i];
+			}
+			matches.addAll(recurseDirectory(subDirList, filter, df));
+		}
+		return matches;
+	}
+	
 }
 
-class XMLFileNameFilter implements FilenameFilter {
+
+class DirectoryFilter implements FilenameFilter {
+	public boolean accept(File dir, String name) {
+		return new File(dir.getAbsolutePath() + File.separator + name).isDirectory();
+	}	
+}
+
+
+class ConfigurableFileExtensionFilter implements FilenameFilter {
+	protected String extension = null;
+	/**
+	 * @param extension
+	 */
+	public ConfigurableFileExtensionFilter(String extension) {
+		super();
+		this.extension = extension.toUpperCase();
+	}
 	public boolean accept(File dir, String name) {		
-		return name.toUpperCase().endsWith(".XML");
+		return name.toUpperCase().endsWith(extension);
 	}	
 }
