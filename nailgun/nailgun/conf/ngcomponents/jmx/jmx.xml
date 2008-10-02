@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
+           
+           
+	<bean id="MBeanServer"
+		class="javax.management.MBeanServerFactory" lazy-init="false" factory-method="createMBeanServer">
+		<constructor-arg type="java.lang.String" value="ngserver" />
+	</bean>
+	
+	<bean id="MBeanServerJMXUrl"
+		class="javax.management.remote.JMXServiceURL" lazy-init="false">
+		<constructor-arg type="java.lang.String" value="service:jmx:rmi:///jndi/rmi://localhost:9545/jmxrmi" />
+	</bean>
+	
+	<!-- 
+		service:jmx:rmi:///jndi/rmi://10.19.47.48:7004/jmxrmi
+		service:jmx:rmi:///jndi/rmi://localhost:4545/jmxrmi
+		service:jmx:rmi://localhost/jndi/rmi://localhost:4545/jmxrmi
+	 -->
+
+	
+
+	<bean id="RMIRegistry"
+		class="java.rmi.registry.LocateRegistry" 
+			lazy-init="false" 
+			factory-method="createRegistry">
+		<constructor-arg value="9545" />
+	</bean>
+
+	
+	<bean id="JMXAttributes" class="com.martiansoftware.nailgun.components.builtins.jmx.JMXAttributeService">
+	</bean>
+
+	<bean id="Printer" class="com.martiansoftware.nailgun.components.builtins.jmx.JMXServerConnectionPrinter">
+		<constructor-arg ref="MBeanServerConnector" />
+	</bean>
+	
+	<bean id="MBeanServerConnector"
+		class="javax.management.remote.JMXConnectorServerFactory" 
+			lazy-init="false" 
+			init-method="start"
+			factory-method="newJMXConnectorServer"
+			depends-on="RMIRegistry">
+		<constructor-arg ref="MBeanServerJMXUrl" />
+		<constructor-arg>
+			<map/>
+		</constructor-arg>
+		<constructor-arg ref="MBeanServer" />
+	</bean>
+	
+	<bean id="jbossJndiTemplate"
+		class="org.springframework.jndi.JndiTemplate">
+		<property name="environment">
+			<props>
+				<prop key="java.naming.factory.initial">
+					org.jnp.interfaces.NamingContextFactory
+				</prop>
+				<prop key="java.naming.provider.url">
+					192.168.31.221:21099
+				</prop>
+				<prop key="java.naming.factory.url.pkgs">
+					org.jboss.naming:org.jnp.interfaces
+				</prop>
+			</props>
+		</property>
+	</bean>
+	
+	<bean id="APP01JMX"
+		class="org.springframework.jndi.JndiObjectFactoryBean">
+		<property name="jndiTemplate" ref="jbossJndiTemplate" />
+		<property name="jndiName" value="jmx/rmi/RMIAdaptor" />
+	</bean>
+	
+	
+</beans>	

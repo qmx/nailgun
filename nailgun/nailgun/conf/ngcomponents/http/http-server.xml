@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
+
+	<bean name="HttpServer" class="org.mortbay.jetty.Server">
+		<constructor-arg value="7777"/>
+		<!-- <property name="handler" ref="DefaultHandler"/>  -->
+	</bean>
+	
+	<bean name="ConsoleServlet" class="com.martiansoftware.nailgun.components.console.NGWebConsoleServlet" 
+		lazy-init="false" destroy-method="destroy" >
+		<constructor-arg value="conf/web/consoletemplate.html"/>
+	</bean>           
+	           
+	           
+	<bean name="ContextBuilder" class="com.martiansoftware.nailgun.components.console.JettyContextBuilder" 
+		lazy-init="false" init-method="init" >
+		<property name="server" ref="HttpServer"/>
+		<property name="servlets">
+			<map>
+				<entry>
+            		<key><value>/console/*</value></key>
+            		<ref bean="ConsoleServlet"/>
+        		</entry>
+			</map>
+		</property>
+	</bean>           
+           
+</beans>           

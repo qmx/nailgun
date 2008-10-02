@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
+
+		<bean id="XMLStyleSheet" class="com.martiansoftware.nailgun.components.builtins.jdbc.SimpleStyleSheetProvider">
+			<constructor-arg>
+				<value><![CDATA[
+					<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+					<xsl:output method="xml" version="1.0" encoding="UTF-8" indent="yes" />
+					<xsl:template match="@*|node()">
+					<xsl:copy>
+					<xsl:apply-templates select="@*|node()"/>
+					</xsl:copy>
+					</xsl:template>
+					</xsl:stylesheet>				
+				]]>
+				</value>
+			</constructor-arg>
+		</bean>
+
+		<bean id="CSVStyleSheet" class="com.martiansoftware.nailgun.components.builtins.jdbc.SimpleStyleSheetProvider">
+			<constructor-arg>
+				<value><![CDATA[
+					<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+					<xsl:output method="text" indent="yes"/>
+						<xsl:template match="names">
+							<xsl:for-each select="name">
+								<xsl:if test="position() != last()"><xsl:value-of select="."/>,</xsl:if>
+								<xsl:if test="position() = last()"><xsl:value-of select="."/><xsl:text>&#xa;</xsl:text></xsl:if>
+							</xsl:for-each>
+						</xsl:template>						
+						<xsl:template match="row">
+							<xsl:for-each select="*">
+								<xsl:if test="position() != last()"><xsl:value-of select="."/>,</xsl:if>
+								<xsl:if test="position() = last()"><xsl:value-of select="."/><xsl:text>&#xa;</xsl:text></xsl:if>
+							</xsl:for-each>
+						</xsl:template>
+					</xsl:stylesheet>
+				]]>
+				</value>
+			</constructor-arg>
+		</bean>
+
+		<bean id="TXTStyleSheet" class="com.martiansoftware.nailgun.components.builtins.jdbc.SimpleStyleSheetProvider">
+			<constructor-arg>
+				<value><![CDATA[
+					<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+					<xsl:param name="delim"></xsl:param>					
+					<xsl:output method="text" indent="yes"/>
+						<xsl:template match="names"/>
+						<xsl:template match="row">
+							<xsl:for-each select="*">
+								<xsl:if test="position() != last()"><xsl:value-of select="."/></xsl:if>
+								<xsl:if test="position() != last()"><xsl:value-of select="$delim"/></xsl:if>								
+								<xsl:if test="position() = last()"><xsl:value-of select="."/><xsl:text>&#xa;</xsl:text></xsl:if>
+							</xsl:for-each>
+						</xsl:template>
+					</xsl:stylesheet>
+				]]>
+				</value>
+			</constructor-arg>
+		</bean>
+
+		
+		<bean id="HTMLStyleSheet" class="com.martiansoftware.nailgun.components.builtins.jdbc.SimpleStyleSheetProvider">
+			<constructor-arg>
+				<value><![CDATA[
+					<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+						<xsl:output method="html" indent="yes" />
+							<xsl:template match="resultset">
+								<h2 align="center">Default HTML Transform Result</h2>
+								<table border="1" align="center"><xsl:apply-templates/></table>
+							</xsl:template>
+							<xsl:template match="names">
+								<tr><xsl:apply-templates/></tr>
+							</xsl:template>
+							<xsl:template match="name">
+								<td><xsl:apply-templates/></td>
+							</xsl:template>
+							<xsl:template match="row">
+								<tr><xsl:apply-templates/></tr>
+							</xsl:template>
+							<xsl:template match="*">
+								<td><xsl:apply-templates/></td>
+							</xsl:template>
+					</xsl:stylesheet>
+				]]>
+				</value>
+			</constructor-arg>
+		</bean>
+</beans>	
