@@ -30,7 +30,7 @@ import com.martiansoftware.nailgun.components.NGApplicationContext;
  * @author <a href="http://www.martiansoftware.com/contact.html">Marty Lamb</a>
  * @author Nicholas Whitehead (nwhitehead at heliosdev dot org)
  */
-class NGSessionPool {
+public class NGSessionPool {
 	
 	/**
 	 * The NGServer's application context
