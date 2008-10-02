@@ -22,6 +22,8 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Properties;
 
+import EDU.oswego.cs.dl.util.concurrent.SynchronizedLong;
+
 import com.martiansoftware.nailgun.NGContext;
 import com.martiansoftware.nailgun.components.builtins.base.BaseComponentService;
 import com.martiansoftware.nailgun.components.builtins.cache.CacheService;
@@ -33,7 +35,7 @@ import com.martiansoftware.nailgun.components.builtins.cache.CacheService;
  * @author Nicholas Whitehead (nwhitehead at heliosdev dot org)
  *
  */
-public class GroovyService extends BaseComponentService {
+public class GroovyService extends BaseComponentService implements GroovyServiceMBean {
 	
 	/** The groovy compilation properties */
 	protected Properties groovyCompilerProperties = new Properties();
@@ -41,12 +43,13 @@ public class GroovyService extends BaseComponentService {
 	protected Properties scriptProperties = new Properties();
 	/** The cache service to store groovy compiled scripts */
 	protected CacheService cache = null;
+	/** The total number of groovy script calls */
+	protected SynchronizedLong totalCalls = new SynchronizedLong(0);
+	/** The total number of failed groovy script calls */
+	protected SynchronizedLong totalErrors = new SynchronizedLong(0);	
+	/** The total elapsed time of groovy script calls */
+	protected SynchronizedLong totalCallTime = new SynchronizedLong(0);
 
-	/** The default JMX ObjectName for the GroovyService management interface */
-	public static final String DEFAULT_OBJECT_NAME = "com.martiansoftware.components.cache:service=Groovy";
-	
-	/** The cache key name prefix to avoid namespace collisions. */
-	public static final String SCRIPT_PREFIX = "groovy/";
 	
 	/**
 	 * Creates a new GroovyService component.
@@ -57,10 +60,7 @@ public class GroovyService extends BaseComponentService {
 	}
 
 	
-	/*
-	 * 1. Create new script and call: Source URL, Name, args[]
-	 * 2. Call script: Name, args[]
-	 */
+
 	
 	/**
 	 * GroovyScriptManager(URL sourceUrl, Properties groovyProperties, Properties scriptProperties, Map args, PrintStream out)
@@ -100,8 +100,10 @@ public class GroovyService extends BaseComponentService {
 		GroovyScriptManager gsm = (GroovyScriptManager)cache.get(scriptName);
 		if(gsm==null) {
 			if(scriptUrl==null) {
-				err.println("Invalid Source URL [" + args[0] + "] or script not found in cache");
-				context.err.println("ERROR: Invalid Source URL [" + args[0] + "] or script not found in cache");
+				String error = "Invalid Source URL [" + args[0] + "] or script not found in cache";
+				err.println(error);
+				context.err.println(error);
+				totalErrors.increment();
 				return;
 			}
 			gsm = new GroovyScriptManager(scriptUrl, groovyCompilerProperties, scriptProperties, new HashMap(), out);
@@ -115,7 +117,21 @@ public class GroovyService extends BaseComponentService {
 				}
 			}
 		}
-		gsm.invokeMethod(methodName, scriptArgs);
+		long start = System.currentTimeMillis();
+		try {
+			gsm.invokeMethod(methodName, scriptArgs);
+			long elapsed = System.currentTimeMillis()-start;
+			totalCalls.increment();
+			totalCallTime.add(elapsed);
+		} catch (Exception e) {
+			String error = "Exception Invoking Groovy [" + scriptName + "/" + methodName + "]:" + e;
+			err.println(error);
+			context.err.println("ERROR: " + error);
+			totalErrors.increment();
+			return;			
+		}
+		
+		
 	}
 	
 	/**
@@ -165,6 +181,41 @@ public class GroovyService extends BaseComponentService {
 
 	public int getScriptCacheSize() {
 		return cache.getNames("groovy/.*").length;
+	}
+
+
+	/**
+	 * The calculated average elapsed time of successful groovy calls.
+	 * @return the average elapsed time of calls.
+	 */
+	public long getAverageCallTime() {
+		return average(totalCalls.get(), totalCallTime.get());
+	}
+	
+	/**
+	 * The total number of successful groovy calls
+	 * @return the totalCalls
+	 */
+	public long getTotalCalls() {
+		return totalCalls.get();
+	}
+
+
+	/**
+	 * The total elapsed time of successful groovy calls
+	 * @return the totalCallTime
+	 */
+	public long getTotalCallTime() {
+		return totalCallTime.get();
+	}
+
+
+	/**
+	 * The total number of errors encountered calling the Groovy Service.
+	 * @return the totalErrors
+	 */
+	public long getTotalErrors() {
+		return totalErrors.get();
 	}
 
 
