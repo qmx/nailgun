@@ -68,6 +68,13 @@ public class NGSessionPool {
 	private Object lock = new Object();
 	
 	/**
+	 * The number of new threads started due to no threads available
+	 */
+	private int overages = 0;
+	
+
+
+	/**
 	 * Creates a new NGSessionRunner operating for the specified server, with
 	 * the specified number of threads
 	 * @param server the server to work for
@@ -90,6 +97,7 @@ public class NGSessionPool {
 		NGSession result;
 		synchronized(lock) {
 			if (poolEntries == 0) {
+				overages++;
 				result = new NGSession(this, server, applicationContext);
 				result.start();
 			} else {
@@ -127,6 +135,34 @@ public class NGSessionPool {
 			while (poolEntries > 0) {
 				take().shutdown();
 			}
+		}
+	}
+
+	/**
+	 * The number of sessions available in the pool.
+	 * @return the poolEntries
+	 */
+	public int getPoolEntries() {
+		synchronized(lock) {
+			return poolEntries;
+		}
+	}
+	
+	/**
+	 * @return the overages
+	 */
+	public int getOverages() {
+		synchronized(lock) {
+			return overages;
+		}
+	}	
+
+	/**
+	 * @return the poolSize
+	 */
+	public int getPoolSize() {
+		synchronized(lock) {
+			return poolSize;
 		}
 	}
 
