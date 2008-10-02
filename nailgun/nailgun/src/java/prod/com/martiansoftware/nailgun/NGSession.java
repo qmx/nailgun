@@ -303,6 +303,7 @@ class NGSession extends Thread {
 						}
 					} else {
 						componentCall = false;
+						nailMainComponentCall = true;
 						alias = server.getAliasManager().getAlias(command);
 						if (alias != null) {
 							cmdclass = alias.getAliasedClass();
@@ -319,7 +320,7 @@ class NGSession extends Thread {
 					}
 
 					NGContext context = new NGContext();
-										
+					context.setDirectComponentCall(!nailMainComponentCall);			
 					context.in = in;
 					context.out = out;
 					context.err = err;
@@ -379,10 +380,9 @@ class NGSession extends Thread {
 					t.printStackTrace();
 					exit.println(NGConstants.EXIT_EXCEPTION); // remote exception constant
 				}
-				// If the call was to a component, 
-				// and that component implements the SocketHandler interface
+				// If the call was to a class that implements SocketHandler 
 				// then the socket should not be closed as it will be closed by the component.
-				if(!componentCall && !(targetObject instanceof SocketHandler)) {
+				if(!(targetObject instanceof SocketHandler)) {
 					socket.close();
 				}
 				
