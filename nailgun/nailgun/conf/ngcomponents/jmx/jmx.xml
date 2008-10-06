@@ -52,6 +52,7 @@
 		<constructor-arg ref="MBeanServer" />
 	</bean>
 	
+	<!-- 
 	<bean id="jbossJndiTemplate"
 		class="org.springframework.jndi.JndiTemplate">
 		<property name="environment">
@@ -75,5 +76,6 @@
 		<property name="jndiName" value="jmx/rmi/RMIAdaptor" />
 	</bean>
 	
+	-->
 	
 </beans>	
