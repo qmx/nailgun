@@ -18,6 +18,8 @@
 
 package com.martiansoftware.nailgun.components.examples;
 
+import com.martiansoftware.nailgun.NGContext;
+
 /**
  * <p>Title:EchoArgsBean</p>
  * <p>Description: Very simple NGServer component bean that echoes all arguments.</p>
@@ -29,5 +31,11 @@ public class EchoArgsBean {
 		StringBuffer buff = new StringBuffer("EchoArgsBean: Target=");
 		buff.append(target).append("\tMessage=").append(message);
 		System.out.println(buff);
+	}
+	
+	public void nailMain(NGContext context) {
+		StringBuffer buff = new StringBuffer("EchoArgsBean: Target=");
+		buff.append(context.getArgs()[0]).append("\tMessage=").append(context.getArgs()[1]);
+		System.out.println(buff);		
 	}
 }
