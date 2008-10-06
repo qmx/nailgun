@@ -4,12 +4,11 @@
 	xmlns:p="http://www.springframework.org/schema/p"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans
            http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
-           
+      
+    <bean id="PerfMon" class="com.martiansoftware.nailgun.components.builtins.win.WindowsPerfMonService"/>    
 
 	<bean id="NGReference" class="com.martiansoftware.nailgun.components.NGReference"/>           
 	
-	<bean id="EchoArgsBean"
-		class="com.martiansoftware.nailgun.components.examples.EchoArgsBean"/> 
 	
 	<bean id="NGCache" class="com.martiansoftware.nailgun.components.builtins.cache.CacheService">
 		<constructor-arg value="false" />  <!--  Soft Cache -->
