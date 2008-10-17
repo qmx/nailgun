@@ -31,12 +31,11 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-
-
 import com.martiansoftware.nailgun.builtins.DefaultNail;
 import com.martiansoftware.nailgun.components.ComponentAlias;
 import com.martiansoftware.nailgun.components.NGApplicationContext;
 import com.martiansoftware.nailgun.components.NGReference;
+import com.martiansoftware.nailgun.util.io.ConfigurableFileExtensionFilter;
 import com.martiansoftware.nailgun.util.io.RecursiveDirectorySearch;
 
 /**
@@ -533,7 +532,7 @@ public class NGServer implements Runnable {
 		InetAddress serverAddress = null;
 		int port = NGConstants.DEFAULT_PORT;
 		String[] springDirectories = springDirArg.split("=")[1].split(",");
-		String[] springDirList = RecursiveDirectorySearch.searchDirectories(new ConfigurableFileExtensionFilter(".xml"), springDirectories);			
+		String[] springDirList = RecursiveDirectorySearch.searchDirectories(new ConfigurableFileExtensionFilter(new String[]{".xml"}), springDirectories);			
 		try {
 			if(springDirList.length > 0) {
 				springEnabled = true;
@@ -697,26 +696,4 @@ public class NGServer implements Runnable {
 		return matches;
 	}
 	
-}
-
-
-class DirectoryFilter implements FilenameFilter {
-	public boolean accept(File dir, String name) {
-		return new File(dir.getAbsolutePath() + File.separator + name).isDirectory();
-	}	
-}
-
-
-class ConfigurableFileExtensionFilter implements FilenameFilter {
-	protected String extension = null;
-	/**
-	 * @param extension
-	 */
-	public ConfigurableFileExtensionFilter(String extension) {
-		super();
-		this.extension = extension.toUpperCase();
-	}
-	public boolean accept(File dir, String name) {		
-		return name.toUpperCase().endsWith(extension);
-	}	
 }
