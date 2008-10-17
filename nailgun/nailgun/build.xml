@@ -129,6 +129,7 @@
                     <classpath >
         		<pathelement path="${build.prod}"/>
         		<path refid="tools.classpath"/>
+                        <path refid="servercomponents.classpath"/>
                     </classpath>
 		</javac>
                 
@@ -174,6 +175,7 @@
 				<pathelement location="${build.instrumented}"/>
 				<pathelement location="${build.prod}"/>
 				<path refid="tools.classpath"/>
+                                <path refid="servercomponents.classpath"/>
 			</classpath>
 				
 
