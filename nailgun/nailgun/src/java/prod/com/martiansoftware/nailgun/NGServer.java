@@ -31,10 +31,13 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+
+
 import com.martiansoftware.nailgun.builtins.DefaultNail;
 import com.martiansoftware.nailgun.components.ComponentAlias;
 import com.martiansoftware.nailgun.components.NGApplicationContext;
 import com.martiansoftware.nailgun.components.NGReference;
+import com.martiansoftware.nailgun.util.io.RecursiveDirectorySearch;
 
 /**
  * <p>Listens for new connections from NailGun clients and launches
@@ -195,18 +198,21 @@ public class NGServer implements Runnable {
 		this.port = port;
 		this.applicationContext = applicationContext;		
 		this.aliasManager = new AliasManager();
-		// populate component aliases
-		String[] beanNames = applicationContext.getBeanDefinitionNames();
-		if(beanNames != null) {
-			for(int i = 0; i < beanNames.length; i++) {
-				ComponentAlias calias = new ComponentAlias(beanNames[i], "Spring Bean:" + applicationContext.getBean(beanNames[i]).getClass().getName(), applicationContext);
-				aliasManager.addComponentAlias(calias);				
+		if(springEnabled) {
+			// populate component aliases
+			String[] beanNames = applicationContext.getBeanDefinitionNames();
+			if(beanNames != null) {
+				for(int i = 0; i < beanNames.length; i++) {
+					ComponentAlias calias = new ComponentAlias(beanNames[i], "Spring Bean:" + applicationContext.getBean(beanNames[i]).getClass().getName(), applicationContext);
+					aliasManager.addComponentAlias(calias);				
+				}
 			}
 		}
 		allNailStats = new java.util.HashMap();
 		// allow a maximum of 10 idle threads.  probably too high a number
 		// and definitely should be configurable in the future
 		sessionPool = new NGSessionPool(this, sessionPoolSize, applicationContext);
+		System.out.println("Session Pool Size:" + sessionPoolSize);
 		// if components are enabled, and the NGReference bean is registered,
 		// populate the values.
 		if(isSpringEnabled()) {
@@ -527,9 +533,9 @@ public class NGServer implements Runnable {
 		InetAddress serverAddress = null;
 		int port = NGConstants.DEFAULT_PORT;
 		String[] springDirectories = springDirArg.split("=")[1].split(",");
-		Set springDirList = recurseDirectory(springDirectories, new ConfigurableFileExtensionFilter(".xml"), new DirectoryFilter());		
+		String[] springDirList = RecursiveDirectorySearch.searchDirectories(new ConfigurableFileExtensionFilter(".xml"), springDirectories);			
 		try {
-			if(springDirList.size() > 0) {
+			if(springDirList.length > 0) {
 				springEnabled = true;
 				System.out.println("Enabling NGServer Components. Descriptors are: [" + springDirList + "]" );
 				appContext = new NGApplicationContext(springDirList);

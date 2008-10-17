@@ -30,12 +30,15 @@ import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.context.NoSuchMessageException;
 import org.springframework.context.support.FileSystemXmlApplicationContext;
+import org.springframework.context.support.GenericApplicationContext;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 
 /**
@@ -46,13 +49,13 @@ import org.springframework.core.io.Resource;
  */
 public class NGApplicationContext implements BeanFactory {
 	
-	protected FileSystemXmlApplicationContext appContext = null;
-	protected Set configDirs = null;
+	protected GenericApplicationContext appContext = null;
+	protected String[] configDirs = null;
 	
-	public NGApplicationContext(Set configDirs) {
+	public NGApplicationContext(String[] configDirs) {
 		this.configDirs = configDirs;
 		//appContext = new FileSystemXmlApplicationContext((String[])configDirs.toArray(new String[configDirs.size()]), true);
-		appContext = new FileSystemXmlApplicationContext();
+		appContext = new GenericApplicationContext();
 	}
 
 	/**
@@ -72,13 +75,7 @@ public class NGApplicationContext implements BeanFactory {
 		appContext.addBeanFactoryPostProcessor(beanFactoryPostProcessor);
 	}
 
-	/**
-	 * 
-	 * @see org.springframework.context.support.AbstractRefreshableConfigApplicationContext#afterPropertiesSet()
-	 */
-	public void afterPropertiesSet() {
-		appContext.afterPropertiesSet();
-	}
+
 
 	/**
 	 * 
@@ -468,31 +465,6 @@ public class NGApplicationContext implements BeanFactory {
 		appContext.registerShutdownHook();
 	}
 
-	/**
-	 * @param allowBeanDefinitionOverriding
-	 * @see org.springframework.context.support.AbstractRefreshableApplicationContext#setAllowBeanDefinitionOverriding(boolean)
-	 */
-	public void setAllowBeanDefinitionOverriding(
-			boolean allowBeanDefinitionOverriding) {
-		appContext
-				.setAllowBeanDefinitionOverriding(allowBeanDefinitionOverriding);
-	}
-
-	/**
-	 * @param allowCircularReferences
-	 * @see org.springframework.context.support.AbstractRefreshableApplicationContext#setAllowCircularReferences(boolean)
-	 */
-	public void setAllowCircularReferences(boolean allowCircularReferences) {
-		appContext.setAllowCircularReferences(allowCircularReferences);
-	}
-
-	/**
-	 * @param name
-	 * @see org.springframework.context.support.AbstractRefreshableConfigApplicationContext#setBeanName(java.lang.String)
-	 */
-	public void setBeanName(String name) {
-		appContext.setBeanName(name);
-	}
 
 	/**
 	 * @param classLoader
@@ -502,21 +474,6 @@ public class NGApplicationContext implements BeanFactory {
 		appContext.setClassLoader(classLoader);
 	}
 
-	/**
-	 * @param location
-	 * @see org.springframework.context.support.AbstractRefreshableConfigApplicationContext#setConfigLocation(java.lang.String)
-	 */
-	public void setConfigLocation(String location) {
-		appContext.setConfigLocation(location);
-	}
-
-	/**
-	 * @param arg0
-	 * @see org.springframework.context.support.AbstractRefreshableConfigApplicationContext#setConfigLocations(java.lang.String[])
-	 */
-	public void setConfigLocations(String[] arg0) {
-		appContext.setConfigLocations(arg0);
-	}
 
 	/**
 	 * @param displayName
@@ -546,8 +503,13 @@ public class NGApplicationContext implements BeanFactory {
 	 * 
 	 * @see org.springframework.context.support.AbstractApplicationContext#start()
 	 */
-	public void start() {
-		appContext.setConfigLocations((String[])configDirs.toArray(new String[configDirs.size()]));
+	public void start() {		
+		XmlBeanDefinitionReader xbdr = new XmlBeanDefinitionReader(appContext);
+		if(configDirs!=null) {
+			for(int i = 0; i < configDirs.length; i++) {
+				xbdr.loadBeanDefinitions(new FileSystemResource(configDirs[i]));
+			}
+		}
 		appContext.refresh();
 		int beanCount = appContext.getBeanDefinitionCount();		
 		System.out.println("Created [" + beanCount + "] NGServer Components");

@@ -83,7 +83,7 @@ public class NGSessionPool {
 	 */
 	NGSessionPool(NGServer server, int poolsize, NGApplicationContext applicationContext) {
 		this.server = server;
-		this.poolSize = Math.min(0, poolsize);
+		this.poolSize = Math.min(10, poolsize);
 		this.applicationContext = applicationContext;
 		pool = new NGSession[poolSize];
 		poolEntries = 0;
