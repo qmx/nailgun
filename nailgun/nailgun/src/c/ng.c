@@ -446,7 +446,7 @@ int isNailgunClientName(char *s) {
  * Displays usage info and bails
  */
 void usage(int exitcode) {
-
+  fprintf(stderr, "NailGun v%s\n\n", NAILGUN_VERSION);
   fprintf(stderr, "Usage: ng class [--nailgun-options] [args]\n");
   fprintf(stderr, "          (to execute a class)\n");
   fprintf(stderr, "   or: ng alias [--nailgun-options] [args]\n");
@@ -510,7 +510,16 @@ int main(int argc, char *argv[], char *env[]) {
   if (isNailgunClientName(cmd)) {
     cmd = NULL;
   }
-  
+
+  /* if executing just the ng client with no arguments or -h|--help, then
+     display usage and exit.  Don't handle -h|--help if a command other than
+     ng or ng.exe was used, since the appropriate nail should then handle
+     --help. */
+  if (cmd == NULL && 
+        (argc == 1 || 
+	  (argc == 2 && strcmp("--help", argv[1]) == 0) ||
+	  (argc == 2 && strcmp("-h", argv[1]) == 0))) usage(0);
+     
   firstArgIndex = 1;
 
   /* quite possibly the lamest commandline parsing ever. 
