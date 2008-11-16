@@ -73,6 +73,7 @@
         <java-data xmlns="http://www.netbeans.org/ns/freeform-project-java/2">
             <compilation-unit>
                 <package-root>src/java/prod</package-root>
+                <classpath mode="compile">lib/spring/spring.jar:lib/concurrent/concurrent.jar:lib/groovy/1.0/groovy-all-1.0.jar:lib/jetty/javax.servlet.jar:lib/jetty/jetty.jar:lib/jetty/jetty-util.jar</classpath>
                 <source-level>1.5</source-level>
             </compilation-unit>
             <compilation-unit>
