@@ -531,25 +531,26 @@ public class NGServer implements Runnable {
 		// null server address means bind to everything local
 		InetAddress serverAddress = null;
 		int port = NGConstants.DEFAULT_PORT;
-		String[] springDirectories = springDirArg.split("=")[1].split(",");
-		String[] springDirList = RecursiveDirectorySearch.searchDirectories(new ConfigurableFileExtensionFilter(new String[]{".xml"}), springDirectories);			
-		try {
-			if(springDirList.length > 0) {
-				springEnabled = true;
-				System.out.println("Enabling NGServer Components. Descriptors are: [" + springDirList + "]" );
-				appContext = new NGApplicationContext(springDirList);
-				System.out.println("Starting NGServer Component Context");
-				appContext.start();
-				System.out.println("Started NGServer Component Context");
-			} else {
-				System.out.println("NGServer Components requested but no valid directories supplied. Disabling NGServer Components.");
-				springEnabled = false;
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-			springEnabled = false;			
-		}
-		
+                if (springDirArg != null) {
+                    String[] springDirectories = springDirArg.split("=")[1].split(",");
+                    String[] springDirList = RecursiveDirectorySearch.searchDirectories(new ConfigurableFileExtensionFilter(new String[]{".xml"}), springDirectories);			
+                    try {
+                            if(springDirList.length > 0) {
+                                    springEnabled = true;
+                                    System.out.println("Enabling NGServer Components. Descriptors are: [" + springDirList + "]" );
+                                    appContext = new NGApplicationContext(springDirList);
+                                    System.out.println("Starting NGServer Component Context");
+                                    appContext.start();
+                                    System.out.println("Started NGServer Component Context");
+                            } else {
+                                    System.out.println("NGServer Components requested but no valid directories supplied. Disabling NGServer Components.");
+                                    springEnabled = false;
+                            }
+                    } catch (Exception e) {
+                            e.printStackTrace();
+                            springEnabled = false;			
+                    }
+                }
 
 		
 		// parse the listening command line parameter, which
