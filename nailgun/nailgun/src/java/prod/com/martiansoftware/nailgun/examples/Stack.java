@@ -70,7 +70,7 @@ public class Stack {
 					sharedStack.wait();
 				}
 				if (sharedStack.size() > 0) {
-					context.out.println(sharedStack.pop());
+					context.out.print(sharedStack.pop());
 					exitCode = 0;
 				}
 			}
