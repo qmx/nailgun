@@ -32,13 +32,18 @@ class NGInputStream extends FilterInputStream {
 	private byte[] header;
 	private boolean eof = false;
 	private long remaining = 0;
-	
+	private boolean started = false;
+        private java.io.OutputStream out;
+        
 	/**
 	 * Creates a new NGInputStream wrapping the specified InputStream
 	 * @param in the InputStream to wrap
+         * @param out the OutputStream to which a STARTINPUT chunk should
+         * be sent prior to the first read.
 	 */
-	public NGInputStream(java.io.InputStream in) {
+	public NGInputStream(java.io.InputStream in, java.io.OutputStream out) {
 		super(in);
+                this.out = out;
 		header = new byte[5];
 	}
 
@@ -111,6 +116,15 @@ class NGInputStream extends FilterInputStream {
 	 * @see java.io.InputStream.read(byte[],offset,length)
 	 */
 	public int read(byte[] b, int offset, int length) throws IOException {
+                if (!started) {
+                    header[0] = header[1] = header[2] = header[3] = 0;
+                    header[4] = (byte) NGConstants.CHUNKTYPE_STARTINPUT;
+                    synchronized(out) {
+                        out.write(header);
+                        out.flush();
+                        started = true;
+                    }
+                }
 		if (remaining == 0) readHeader();
 		if (eof) return(-1);
 

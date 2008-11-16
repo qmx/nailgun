@@ -94,6 +94,7 @@
 #define CHUNKTYPE_DIR 'D'
 #define CHUNKTYPE_CMD 'C'
 #define CHUNKTYPE_EXIT 'X'
+#define CHUNKTYPE_STARTINPUT 'S'
 
 
 /* the socket connected to the nailgun server */
@@ -101,6 +102,9 @@ int nailgunsocket = 0;
 
 /* buffer used for receiving and writing nail output chunks */
 char buf[BUFSIZE];
+
+/* track whether or not we've been told to send stdin to server */
+int startedInput = 0;
 
 /**
  * Clean up the application.
@@ -315,41 +319,6 @@ void processExit(char *buf, unsigned long len) {
   cleanUpAndExit(exitcode);
 }
 
-/**
- * Processes data from the nailgun server.
- */
-void processnailgunstream() {
-
-  /*for (;;) {*/
-    int bytesRead = 0;
-    unsigned long len;
-    char chunkType;
-
-    bytesRead = recv(nailgunsocket, buf, CHUNK_HEADER_LEN, 0);
-
-    if (bytesRead < CHUNK_HEADER_LEN) {
-      handleSocketClose();
-    }
-  
-    len = ((buf[0] << 24) & 0xff000000)
-      | ((buf[1] << 16) & 0x00ff0000)
-      | ((buf[2] << 8) & 0x0000ff00)
-      | ((buf[3]) & 0x000000ff);
-  
-    chunkType = buf[4];
-  
-    switch(chunkType) {
-      case CHUNKTYPE_STDOUT: recvToFD(NG_STDOUT_FILENO, buf, len);
-            break;
-      case CHUNKTYPE_STDERR: recvToFD(NG_STDERR_FILENO, buf, len);
-            break;
-      case CHUNKTYPE_EXIT:   processExit(buf, len);
-            break;
-      default:  fprintf(stderr, "Unexpected chunk type %d ('%c')\n", chunkType, chunkType);
-          cleanUpAndExit(NAILGUN_UNEXPECTED_CHUNKTYPE);
-    }
-  /*}*/
-}
 
 /**
  * Sends len bytes from buf to the nailgun server in a stdin chunk.
@@ -431,25 +400,76 @@ void initSockets () {
  * Initialise the asynchronous io.
  */
 void initIo () {
-  SECURITY_ATTRIBUTES securityAttributes;
-  DWORD threadId = 0;
-
   /* create non-blocking console io */
   AllocConsole();
+  
+  NG_STDIN_FILENO = GetStdHandle(STD_INPUT_HANDLE);
+  NG_STDOUT_FILENO = GetStdHandle(STD_OUTPUT_HANDLE);
+  NG_STDERR_FILENO = GetStdHandle(STD_ERROR_HANDLE);
+}
+#endif
+
+#ifdef WIN32
+/**
+ * Initialise the asynchronous io.
+ */
+void winStartInput () {
+  SECURITY_ATTRIBUTES securityAttributes;
+  DWORD threadId = 0;
 
   securityAttributes.bInheritHandle = TRUE;
   securityAttributes.lpSecurityDescriptor = NULL;
   securityAttributes.nLength = 0;
   
-  NG_STDIN_FILENO = GetStdHandle(STD_INPUT_HANDLE);
-  NG_STDOUT_FILENO = GetStdHandle(STD_OUTPUT_HANDLE);
-  NG_STDERR_FILENO = GetStdHandle(STD_ERROR_HANDLE);
-   
   if (!CreateThread(&securityAttributes, 0, &processStdin, NULL, 0, &threadId)) {
     handleError();
   }
 }
 #endif
+
+/**
+ * Processes data from the nailgun server.
+ */
+void processnailgunstream() {
+
+  /*for (;;) {*/
+    int bytesRead = 0;
+    unsigned long len;
+    char chunkType;
+
+    bytesRead = recv(nailgunsocket, buf, CHUNK_HEADER_LEN, 0);
+
+    if (bytesRead < CHUNK_HEADER_LEN) {
+      handleSocketClose();
+    }
+  
+    len = ((buf[0] << 24) & 0xff000000)
+      | ((buf[1] << 16) & 0x00ff0000)
+      | ((buf[2] << 8) & 0x0000ff00)
+      | ((buf[3]) & 0x000000ff);
+  
+    chunkType = buf[4];
+  
+    switch(chunkType) {
+      case CHUNKTYPE_STDOUT: recvToFD(NG_STDOUT_FILENO, buf, len);
+            break;
+      case CHUNKTYPE_STDERR: recvToFD(NG_STDERR_FILENO, buf, len);
+            break;
+      case CHUNKTYPE_EXIT:   processExit(buf, len);
+            break;
+      case CHUNKTYPE_STARTINPUT:
+            if (!startedInput) {
+                #ifdef WIN32
+                winStartInput();
+                #endif
+      		startedInput = 1;
+      	    }
+            break;
+      default:  fprintf(stderr, "Unexpected chunk type %d ('%c')\n", chunkType, chunkType);
+          cleanUpAndExit(NAILGUN_UNEXPECTED_CHUNKTYPE);
+    }
+  /*}*/
+}
 
 /**
  * Trims any path info from the beginning of argv[0] to determine
@@ -669,7 +689,7 @@ int main(int argc, char *argv[], char *env[]) {
       FD_ZERO(&readfds);
 
       /* don't select on stdin if we've already reached its end */
-      if (!eof) {
+      if (startedInput && !eof) {
 	FD_SET(NG_STDIN_FILENO, &readfds);
       }
 

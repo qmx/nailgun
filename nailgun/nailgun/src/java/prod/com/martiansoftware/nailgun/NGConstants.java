@@ -95,6 +95,15 @@ public class NGConstants {
          */
         public static final char CHUNKTYPE_LONGARG = 'L';
         
+        /**
+         * Chunk type marker for a "startinput" chunk. 
+         * This chunk type is sent from the server to the client and indicates
+         * that the client should begin sending stdin to the server.  It
+         * is automatically sent the first time the client's inputstream
+         * is read.
+         */
+        public static final char CHUNKTYPE_STARTINPUT = 'S';
+        
 	/**
 	 * Server version number
 	 */

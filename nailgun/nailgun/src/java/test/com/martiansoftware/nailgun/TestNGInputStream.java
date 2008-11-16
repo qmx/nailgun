@@ -20,6 +20,7 @@ package com.martiansoftware.nailgun;
 
 import java.io.ByteArrayInputStream;
 
+import java.io.ByteArrayOutputStream;
 import junit.framework.TestCase;
 
 /**
@@ -37,7 +38,8 @@ public class TestNGInputStream extends TestCase {
 	private static final String TESTSTRING = "This is a test!";
 	
 	public void testNGInputStreamIntoArray() throws Exception {
-		NGInputStream in = new NGInputStream(new ByteArrayInputStream(TESTDATA));
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+		NGInputStream in = new NGInputStream(new ByteArrayInputStream(TESTDATA), out);
 		
 		assertTrue(in.available() > 0);
 		assertFalse(in.markSupported());
@@ -55,11 +57,16 @@ public class TestNGInputStream extends TestCase {
 		} while (bytesRead > 0);
 		assertEquals(15, totalBytes);
 		assertEquals(TESTSTRING, sbuf.toString());
+                buf = out.toByteArray();
+                for (int i = 0; i < 4; ++i) {
+                    assertEquals(buf[i], 0);
+                }
+                assertEquals(buf[4], NGConstants.CHUNKTYPE_STARTINPUT);
 	}
 	
 	public void testNGInputStreamCharByChar() throws Exception {
 		StringBuffer buf = new StringBuffer();
-		NGInputStream in = new NGInputStream(new ByteArrayInputStream(TESTDATA));
+		NGInputStream in = new NGInputStream(new ByteArrayInputStream(TESTDATA), new ByteArrayOutputStream());
 		int c = in.read();
 		while (c != -1) {
 			buf.append((char) c);
