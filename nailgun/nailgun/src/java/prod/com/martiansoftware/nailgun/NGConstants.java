@@ -86,7 +86,15 @@ public class NGConstants {
 	 * Chunk type marker for client exit chunks
 	 */	
 	public static final char CHUNKTYPE_EXIT = 'X';
-	
+	        
+        /**
+         * Chunk type marker for long argument chunks
+         * These are variable length arguments that may be in more than one
+         * chunk.  They are reassembled on the server.  The end of the argument
+         * is indicated by an empty chunk.
+         */
+        public static final char CHUNKTYPE_LONGARG = 'L';
+        
 	/**
 	 * Server version number
 	 */

@@ -18,6 +18,7 @@
 
 package com.martiansoftware.nailgun;
 
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
@@ -202,6 +203,8 @@ class NGSession extends Thread {
 				String cwd = null;			// working directory
 				String command = null;		// alias or class name
 				
+                                ByteArrayOutputStream longArgBuf = null;  // used for reading longargs
+                                String line = null;
 				// read everything from the client up to and including the command
 				while (command == null) {
 					sockin.readFully(lbuf);
@@ -210,38 +213,51 @@ class NGSession extends Thread {
 					
 					byte[] b = new byte[(int) bytesToRead];
 					sockin.readFully(b);
-					String line = new String(b, "US-ASCII");
+					if (chunkType != NGConstants.CHUNKTYPE_LONGARG) line = new String(b);
 	
 					switch(chunkType) {
 									
-						case NGConstants.CHUNKTYPE_ARGUMENT:
-									//	command line argument
-									remoteArgs.add(line);
-									break;
+                                            case NGConstants.CHUNKTYPE_ARGUMENT:
+                                                                    //	command line argument
+                                                                    remoteArgs.add(line);
+                                                                    break;
 
-						case NGConstants.CHUNKTYPE_ENVIRONMENT:
-									//	parse environment into property
-									int equalsIndex = line.indexOf('=');
-									if (equalsIndex > 0) {
-										remoteEnv.setProperty(
-												line.substring(0, equalsIndex),
-												line.substring(equalsIndex + 1));
-									}
-									String key = line.substring(0, equalsIndex);
-									break;
-									
-						case NGConstants.CHUNKTYPE_COMMAND:
-									// 	command (alias or classname)
-									command = line;
-									break;
-									
-						case NGConstants.CHUNKTYPE_WORKINGDIRECTORY:
-									//	client working directory
-									cwd = line;
-									break;
-									
-						default:	// freakout?
-					}
+                                            case NGConstants.CHUNKTYPE_ENVIRONMENT:
+                                                                    //	parse environment into property
+                                                                    int equalsIndex = line.indexOf('=');
+                                                                    if (equalsIndex > 0) {
+                                                                            remoteEnv.setProperty(
+                                                                                            line.substring(0, equalsIndex),
+                                                                                            line.substring(equalsIndex + 1));
+                                                                    }
+                                                                    String key = line.substring(0, equalsIndex);
+                                                                    break;
+
+                                            case NGConstants.CHUNKTYPE_COMMAND:
+                                                                    // 	command (alias or classname)
+                                                                    command = line;
+                                                                    break;
+
+                                            case NGConstants.CHUNKTYPE_WORKINGDIRECTORY:
+                                                                    //	client working directory
+                                                                    cwd = line;
+                                                                    break;
+				
+                                            case NGConstants.CHUNKTYPE_LONGARG:
+                                                                    if (bytesToRead == 0) {
+                                                                        // end of longarg
+                                                                        if (longArgBuf == null) {
+                                                                            remoteArgs.add("");
+                                                                        } else {
+                                                                            remoteArgs.add(new String(longArgBuf.toByteArray()));
+                                                                        }
+                                                                        longArgBuf = null;
+                                                                    } else {
+                                                                        if (longArgBuf == null) longArgBuf = new ByteArrayOutputStream();
+                                                                        longArgBuf.write(b);
+                                                                    }
+                                            default:	// freakout?
+                                        }
 				}
 	
 				updateThreadName(socket.getInetAddress().getHostAddress() + ": " + command);
