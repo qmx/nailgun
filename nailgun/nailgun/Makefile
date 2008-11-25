@@ -1,13 +1,12 @@
 # This Makefile has only been tested on linux.  It uses
 # MinGW32 to cross-compile for windows.  To install and
-# configure MinGW32 on linux, see http://www.mingw.org
-
-
-# This is where the mingw32 compiler exists in Ubuntu 8.04.
-# Your compiler location may vary.
-WIN32_CC=/usr/bin/i586-mingw32msvc-gcc
+# configure MinGW32 on linux, see
+# http://www.mingw.org/MinGWiki/index.php/BuildMingwCross
+#
+# Marty Lamb
 
 CC=gcc
+WIN32_CC=/usr/bin/i586-mingw32msvc-gcc
 CFLAGS=-Wall -pedantic -s -O3
 
 ng: src/c/ng.c
@@ -24,4 +23,4 @@ clean:
 	@echo "You must remove this manually.  Most users won't have MinGW"
 	@echo "installed - so I'd rather not delete something they can't rebuild."
 	rm ng
-#	rm ng.exe
+	rm ng.exe
