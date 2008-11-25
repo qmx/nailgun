@@ -136,6 +136,9 @@
 	</target>
 		
 	<target name="compile-client" depends="init">
+		<mkdir dir="${dist}/linux64"/>
+		<mkdir dir="${dist}/linux32"/>
+		<mkdir dir="${dist}/win32"/>		
 		<exec executable="make">
 			<arg line="ng"/>
 
